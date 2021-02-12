@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>A Geometric Approach to Matrices</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css?family=Muli:300');
+            @import url('https://fonts.googleapis.com/css?family=DM+Sans:500');
+            * {
+                font-family: Muli;
+                font-weight: 200;
+            }
+            *::-webkit-scrollbar {
+                width: 10px;
+            }
+            *::-webkit-scrollbar-thumb {
+                background-color: #999;
+                border-radius: 5px;
+            }
+            *::-webkit-scrollbar-track {
+                background-color: #eee;
+            }
+            h1,
+            h2 {
+                font-family: 'DM Sans';
+            }
+            p,
+            li {
+                font-size: 16px;
+                line-height: 30px;
+            }
+            a {
+                color: #36c;
+                text-decoration: none;
+            }
+            abbr {
+                font-family: 'DM Sans';
+                text-decoration: none;
+            }
+            h1 {
+                font-size: 36px;
+            }
+            h2 {
+                margin: 25px 0 -10px 0;
+                font-size: 18px;
+            }
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+            }
+            body {
+                overflow-x: hidden;
+                overflow-y: scroll;
+            }
+            .full {
+                align-items: center;
+                display: flex;
+                height: 100%;
+                justify-content: center;
+                text-align: center;
+            }
+            #cover {
+                background-color: #f7f7f7;
+                position: absolute;
+                top: 0; bottom: 0; left: 0; right: 0;
+                z-index: -2;
+            }
+            #backer {
+                background-position: center;
+                background-size: cover;
+                opacity: 0.1;
+                position: absolute;
+                top: 0; bottom: 0; left: 0; right: 0;
+                z-index: -1;
+            }
+            #header h1 {
+                background-color: #fc3;
+                box-shadow: 10px 10px 0 #c90;
+                color: #fff;
+                font-size: 60px;
+                margin: 0 50px;
+                padding: 10px 25px;
+            }
+            #header p {
+                font-size: 30px;
+            }
+            .contain {
+                border-bottom: 2px solid #eee;
+                display: flex;
+                margin: 50px auto;
+                padding: 0 50px;
+                width: 896px;
+            }
+            .contain .image {
+                background-size: contain;
+                border: 1px solid #eee;
+                box-shadow: 5px 5px 0 #f7f7f7;
+                flex-shrink: 0;
+                transition: 0.125s;
+            }
+            .left {
+                padding: 50px 0 50px 50px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="full">
+            <div id="cover"></div>
+            <div id="header">
+                <h1>A Geometric Approach<br>to Matrices</h1>
+                <p>Online resources</p>
+            </div>
+            <div id="backer" style="background-image: url('images/cover.png')"></div>
+        </div>
+
+        <div class="contain">
+            <div class="left" style="padding-left: 0; padding-top: 0; margin: auto; max-width: 768px">
+                <h2>Summary</h2>
+                <p>
+                    This is a website where all resources pertaining to GAtM will be made available. This includes the PDF versions of the textbook and answer key, individual chapters, and also eventually programs and apps for students and some CADs for visuals.
+                    <br><br>
+                    GAtM's source code can be found <a href="https://github.com/anematode/gatm/" target="_blank">here</a>. You are welcome to make an issue or a fork if you see any issue with the text; if you do want to clone it and run it on your computer, make sure to read the README to get the full instructions on how to build it. GAtM is written with LaTeX, Asymptote, and Ti<em>k</em>z.
+                </p>
+            </div>
+        </div>
+        <div class="contain">
+            <div class="image" style="background-image: url('images/cover-page.png'); width: 240px; height: calc(240px*3507/2480)"></div>
+            <div class="left">
+                <h1>A Geometric Approach to Matrices</h1>
+                <p>
+                    This is the full PDF for the textbook; chapters are provided for convenience. Keep in mind that these versions will be continuously updated so may not match the printed version.
+                    <br><br>
+                    <a href="./textbook/gatm.pdf" target="_blank">Click here for textbook</a>
+                </p>
+                <h2>Chapters:</h2>
+                <ol>
+                    <li><a href="./textbook/chapters/trig_review.pdf" target="_blank">Trigonometry Review</a></li>
+                    <li><a href="./textbook/chapters/itsasnap.pdf" target="_blank">It's a Snap</a></li>
+                    <li><a href="./textbook/chapters/snap_flip.pdf" target="_blank">From Snaps to Flips</a></li>
+                    <li><a href="./textbook/chapters/rrg.pdf" target="_blank">Rotation and Reflection Groups</a></li>
+                    <li><a href="./textbook/chapters/inf.pdf" target="_blank">Infinite Groups</a></li>
+                    <li><a href="./textbook/chapters/cmplx_geo.pdf" target="_blank">Geometry of Complex Numbers</a></li>
+                    <li><a href="./textbook/chapters/vitamin_i.pdf" target="_blank">Vitamin <em>i</em></a></li>
+                    <li><a href="./textbook/chapters/mtrx_mult.pdf" target="_blank">Matrix Multiplication</a></li>
+                    <li><a href="./textbook/chapters/map_plane.pdf" target="_blank">Mapping the plane with Matrices</a></li>
+                    <li><a href="./textbook/chapters/plane_rot.pdf" target="_blank">Rotations of the Plane</a></li>
+                    <li><a href="./textbook/chapters/mat_gen.pdf" target="_blank">Matrices Generate Groups</a></li>
+                    <li><a href="./textbook/chapters/comp_map.pdf" target="_blank">Composite Mappings of the Plane</a></li>
+                    <li><a href="./textbook/chapters/inverses.pdf" target="_blank">Inverses</a></li>
+                    <li><a href="./textbook/chapters/mod_m.pdf" target="_blank">Multiplication Modulo <em>m</em> Meets Groups</a></li>
+                    <li><a href="./textbook/chapters/eigen.pdf" target="_blank">Eigenvectors and Eigenvalues</a></li>
+                    <li><a href="./textbook/chapters/comp_func.pdf" target="_blank">Composition of Functions</a></li>
+                    <li><a href="./textbook/chapters/glossary.pdf" target="_blank">Glossary</a></li>
+                </ol>
+            </div>
+        </div>
+        <div class="contain">
+            <div class="image" style="background-image: url('images/cover-page-answers.png'); width: 240px; height: calc(240px*3507/2480)"></div>
+            <div class="left">
+                <h1>A Geometric Approach to Matrices (Answer Key)</h1>
+                <p>
+                    This contains answers to all of the problems in the textbook. Note that only the first five chapter PDFS have been completely updated to match the textbook; the full answer key and other chapters may contain answers to problems that do not exist.
+                    <br><br>
+                    <a href="./textbook/gatm_answers.pdf" target="_blank">Click here for answers</a>
+                </p>
+                <h2>Chapters:</h2>
+                <ol>
+                    <li><a href="./textbook/chapters_answers/trig_review.pdf" target="_blank">Trigonometry Review</a></li>
+                    <li><a href="./textbook/chapters_answers/itsasnap.pdf" target="_blank">It's a Snap</a></li>
+                    <li><a href="./textbook/chapters_answers/snap_flip.pdf" target="_blank">From Snaps to Flips</a></li>
+                    <li><a href="./textbook/chapters_answers/rrg.pdf" target="_blank">Rotation and Reflection Groups</a></li>
+                    <li><a href="./textbook/chapters_answers/inf.pdf" target="_blank">Infinite Groups</a></li>
+                    <li><a href="./textbook/chapters_answers/cmplx_geo.pdf" target="_blank">Geometry of Complex Numbers</a></li>
+                    <li><a href="./textbook/chapters_answers/vitamin_i.pdf" target="_blank">Vitamin <em>i</em></a></li>
+                    <li><a href="./textbook/chapters_answers/mtrx_mult.pdf" target="_blank">Matrix Multiplication</a></li>
+                    <li><a href="./textbook/chapters_answers/map_plane.pdf" target="_blank">Mapping the plane with Matrices</a></li>
+                    <li><a href="./textbook/chapters_answers/plane_rot.pdf" target="_blank">Rotations of the Plane</a></li>
+                    <li><a href="./textbook/chapters_answers/mat_gen.pdf" target="_blank">Matrices Generate Groups</a></li>
+                    <li><a href="./textbook/chapters_answers/comp_map.pdf" target="_blank">Composite Mappings of the Plane</a></li>
+                    <li><a href="./textbook/chapters_answers/inverses.pdf" target="_blank">Inverses</a></li>
+                    <li><a href="./textbook/chapters_answers/mod_m.pdf" target="_blank">Multiplication Modulo <em>m</em> Meets Groups</a></li>
+                    <li><a href="./textbook/chapters_answers/eigen.pdf" target="_blank">Eigenvectors and Eigenvalues</a></li>
+                </ol>
+            </div>
+        </div>
+
+        <script>
+            document.onscroll = function() {
+                document.getElementById('backer').style.marginTop = (document.documentElement.scrollTop / 2) + "px";
+            }
+        </script>
+    </body>
+</html>
