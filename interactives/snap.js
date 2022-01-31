@@ -627,7 +627,7 @@ class SnapChain extends VisGroup {
       let reordered = []
 
       for (let j = 0; j < snapWidth; ++j) {
-        reordered[j] = stringVertices[snapElement[j]]
+        reordered[snapElement[j]] = stringVertices[j]
       }
 
       stringVertices = reordered
@@ -716,7 +716,7 @@ const vis = new SnapVisualization()
 document.body.appendChild(vis.domElement)
 
 let snapChain = new SnapChain()
-snapChain.setSnapElements([ 'I', 'A', 'B'])
+snapChain.setSnapElements([ 'E', 'E', 'E' ])
 
 vis.addChild(snapChain)
 
