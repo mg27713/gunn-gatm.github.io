@@ -70,11 +70,39 @@ function invertElement (e) {
   return ret
 }
 
+class Vector2 {
+  constructor(x, y) {
+    this.x = x
+    this.y = y
+  }
+
+  eq(v) {
+    return v && (this.x === v.x && this.y === v.y)
+  }
+
+  clone() {
+    return new Vector2(this.x, this.y)
+  }
+
+  // Try to convert anything to a vec2
+  static fromObj (o) {
+    let x = 0, y = 0
+    if (Array.isArray(o)) {
+      x = o[0]
+      y = o[1]
+    } else if (o.x !== undefined) {
+      x = o.x
+      y = o.y
+    }
+
+    return new Vector2(+x, +y)
+  }
+}
+
 // Returns a string between -2 billion and 2 billion
 function getUUID() {
   return ((Math.random() * (2 ** 32)) | 0) + ""
 }
-
 
 class VisComponent {
   constructor () {
@@ -171,42 +199,6 @@ class VisGroup extends VisComponent {
 
   removeChildren () {
     this.children = []
-  }
-}
-
-class Vector2 {
-  constructor(x, y) {
-    this.x = x
-    this.y = y
-  }
-
-  add(v) {
-    return new Vector2(this.x + v.x, this.y + v.y)
-  }
-
-  subtract(v) {
-    return new Vector2(this.x - v.x, this.y - v.y)
-  }
-
-  eq(v) {
-    return v && (this.x === v.x && this.y === v.y)
-  }
-
-  clone() {
-    return new Vector2(this.x, this.y)
-  }
-
-  static fromObj (o) {
-    let x = 0, y = 0
-    if (Array.isArray(o)) {
-      x = o[0]
-      y = o[1]
-    } else if (o.x !== undefined) {
-      x = o.x
-      y = o.y
-    }
-
-    return new Vector2(+x, +y)
   }
 }
 
