@@ -9,11 +9,34 @@
             margin: 0;
             padding: 0;
         }
+
+        #drawing-surface {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .sidebar {
+            position: absolute;
+            right: 0;
+            width: 500px;
+            height: 100%;
+            background-color: rgba(0, 0, 15, 10%);
+            padding: 15px;
+        }
+
+        h1 {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
 
+<div id="drawing-surface"></div>
+<div class="sidebar">
+    <h1>It's a Snap!</h1>
+</div>
 
 <script src="snap.js"></script>
 

@@ -1,6 +1,5 @@
 
 // Identity is [ 0, 1, 2 ], etc.
-
 let textbookNaming = {
   'I': [ 0, 1, 2 ],
   'A': [ 0, 2, 1 ],
@@ -10,6 +9,7 @@ let textbookNaming = {
   'E': [ 1, 2, 0 ]
 }
 
+// Convert an element to its name
 function elementToName (e) {
   outer: for (let [ name, values ] of Object.entries(textbookNaming)) {
     for (let i = 0; i < values.length; ++i) {
@@ -18,6 +18,8 @@ function elementToName (e) {
 
     return name
   }
+
+  return null
 }
 
 function nameToElement (name) {
@@ -30,6 +32,7 @@ function toElement (o) {
   } else if (Array.isArray(o)) {
     return o;
   }
+
   throw new TypeError("What the fuck")
 }
 
@@ -344,8 +347,8 @@ function isReductionOf (newVertices, oldVertices) {
 // originalFixedVertices: Vector2[m]
 // fixedMovementProportion: number -> between 0 and 1, how much the movement has finished
 // fixedVertices: Vector2[m]
-// fixedInterleavedIndices: int[m] -> indices of fixedVertices within currentVertices
-// fixedTargetVertices: Vector2[m] -> W
+// fixedIndices: int[m] -> indices of fixedVertices within currentVertices
+// targetFixedVertices: Vector2[m] -> W
 
 
 function interpolateVertices (original, target, prop) {
@@ -373,85 +376,112 @@ function interpolateVertices (original, target, prop) {
 // an initial velocity vector and acceleration being determined by their neighboring points, the magnitude of the acceleration
 // proportional to the string length.
 
+// How many physics ticks to run per second (independent of frame rate)
+const PHYSICS_TPS = 1000
+
+// Max physics ticks per frame (to avoid lag)
+const MAX_TICKS_PER_FRAME = 100
+
 class StringComponent extends VisComponent {
   constructor () {
     super()
 
-    /**
-     * String is held by these vertices
-     * @type {*[]}
-     */
-    this.currentVertices = []  // Current simulated vertices
-    this.currentVertexVelocities = []
-    this.fixedTargetVertices = []
-    this.originalFixedVertices = []
-    this.fixedVertices = []
-    this.fixedInterleavedIndices = []
-    this.fixedMovementProportion = 0
+    // Actual vertices to draw to SVG (copied from currentVertices)
+    this.drawVertices = []
 
+    // Whether to do any physics at all
     this.inMotion = false
+    // Last time at which a tick was run; used to calculate how many ticks to do per frame
+    this.lastTick = performance.now()
 
-    /**
-     * @type {Vector2[]}
-     */
-    this.drawnVertices = []
+    // Current simulated vertices (list of vectors)
+    this.currentVertices = []
+    // Velocities of above vertices
+    this.currentVertexVelocities = []
+    // Where the fixed vertices will be put, when fixedMovementProportion = 1
+    this.targetFixedVertices = []
+    // Where the fixed vertices start, when fixedMovementProportion = 0 (currently effectively unused)
+    this.originalFixedVertices = []
+    // What proportion of the interpolation between original and targetFixedVertices is completed (effectively unused)
+    this.fixedMovementProportion = 0
+    // Where the fixed vertices currently are
+    this.fixedVertices = []
+    // Indices of the fixed vertices within currentVertices
+    this.fixedIndices = []
   }
 
-  initSimulation (ptCount=20) {
-    if (this.currentVertices.length < 2) {
-      // No simulation to do here
-      this.inMotion = false
-      this.fixedMovementProportion = 0
-      this.currentVertices = this.fixedTargetVertices
+  // Initialize the movement from the current position to targetFixedVertices (which determines the resulting position)
+  initSimulation () {
+    // How many pieces to subdivide the string into
+    const SIMULATION_PT_COUNT = 20
 
+    if (this.currentVertices.length < 2) {
+      // Nothing to interpolate from if there aren't already two vertices, so force snap and return immediately
+      this.snapToNewVertices(this.targetFixedVertices, true)
       return
     }
 
-    let target = this.fixedTargetVertices
+    // Get proportions of each vertex along the target path
+    let target = this.targetFixedVertices
     let targetCount = target.length
     let targetProportions = getVertexProportions(target)
 
-    let original = sampleChain(this.currentVertices, targetProportions)
-    this.originalFixedVertices = original
+    // Sample the current vertices with those proportions
+    this.originalFixedVertices = sampleChain(this.currentVertices, targetProportions)
 
-    // Get ptCount samples of intermediate points
-    let equi = arange(0, 1, ptCount)
+    // Proportions of intermediate points
+    let equi = arange(0, 1, SIMULATION_PT_COUNT)
+    // Final sampling proportions that will be used
     let sampleProportions = []
 
     // Indices in the sampling after which the fixed vertices are
-    let interleavedIndices = []
+    let fixedIndices = []
+    // Current index in the (eventual) list of samples
     let currentIndex = 0
     for (let i = 0; i < targetCount; ++i) {
-      while (targetProportions[i] > equi[currentIndex] && currentIndex < ptCount) {
+      // Step forward until the equidistant samples have reached the target sample in question
+      while (targetProportions[i] > equi[currentIndex] && currentIndex < SIMULATION_PT_COUNT) {
+        // Push equidistant sample (samples subject to simulation)
         sampleProportions.push(equi[currentIndex])
         currentIndex++
       }
 
-      interleavedIndices.push(currentIndex + interleavedIndices.length)
+      // We offset by fixedIndices.length, because sampleProportions is changing in length as well and we want
+      // fixedIndices to be relative to the final samples array
+      fixedIndices.push(currentIndex + fixedIndices.length)
+      // Push fixed sample (sample not subject to simulation)
       sampleProportions.push(targetProportions[i])
     }
 
+    // Sample with the new proportions
     let sampling = sampleChain(this.currentVertices, sampleProportions)
-    this.currentVertices = sampling
 
-    this.fixedInterleavedIndices = interleavedIndices
+    this.currentVertices = sampling
+    this.fixedIndices = fixedIndices
+
+    // We do the "inverse" operation of simpleChain because it helps with the quantization of the pieces
     this.sampleProportions = getVertexProportions(sampling)
 
+    // Initialize all velocities to <0, 0>
     let vVel = this.currentVertexVelocities = []
     for (let i = 0; i < this.currentVertices.length; ++i) vVel.push(new Vector2(0, 0))
 
     this.fixedMovementProportion = 0
   }
 
+  // Snap the string to new vertices; force determines whether the snap is instant or subject to simulation
   snapToNewVertices (vertices, force=true) {
     vertices = removeDuplicateVertices(vertices)
+
+    this.inMotion = !force
     if (force) {
-      this.inMotion = false
+      // Immediately copy over the vertices
       this.currentVertices = vertices
     } else {
-      this.fixedTargetVertices = vertices
-      this.inMotion = true
-      this.initSimulation(20)
+      this.targetFixedVertices = vertices
+      this.initSimulation()
+
+      // Immediately move fixed points to target for now
       this.fixedMovementProportion = 1
     }
   }
@@ -460,104 +490,131 @@ class StringComponent extends VisComponent {
     this.domElement = document.createElementNS("http://www.w3.org/2000/svg", "polyline")
   }
 
+  // One "tick" of the rubber band movement
   physicsTick () {
-    this.drawnVertices = this.currentVertices
+    this.drawVertices = this.currentVertices
     if (!this.inMotion) return
 
+    // Factor by which the stored velocity is scaled DOWN to actually add to the position vector
     const VEL_SLOWDOWN_FACTOR = 5
+
+    // Factor by which the stored velocity is dampened every tick (loss of energy)
     const VEL_DAMPENING_FACTOR = 1 / 1.01
 
-    let isDead = true
+    // Clamp acceleration to below this value
+    const MAX_ACCEL = 0.3
 
-    let fixed = this.fixedVertices = interpolateVertices(this.originalFixedVertices, this.fixedTargetVertices, this.fixedMovementProportion)
-    let interleavedIndices = this.fixedInterleavedIndices
+    // "Fixed" vertices, i.e., the ones the physics cannot change
+    let fixed = this.fixedVertices = interpolateVertices(this.originalFixedVertices, this.targetFixedVertices, this.fixedMovementProportion)
+    // Indices in current vertices which are fixed
+    let fixedIndices = this.fixedIndices
 
+    // Current vertices, total length of the chain, proportions along the original chain at which they were sampled,
+    // their respective velocities. Velocities of "fixed" vertices are never used
     let current = this.currentVertices
     let currentLen = vertexChainLength(current)
-
-    // Move the fixed points
-    for (let i = 0; i < interleavedIndices.length; ++i) {
-      let fixedIndex = interleavedIndices[i]
-      current[fixedIndex] = fixed[i]
-    }
-
-    let newVertices = []
     let proportions = this.sampleProportions
     let velocities = this.currentVertexVelocities
 
-    // Simulate the other points
+    // Whether the physics are dead, i.e., whenever every velocity is below MIN_VEL in magnitude
+    let isDead = true
+    const MIN_VEL = 0.1 / currentLen
+
+    // Move the fixed points to their intended location
+    for (let i = 0; i < fixedIndices.length; ++i)
+      current[fixedIndices[i]] = fixed[i]
+
+    let newVertices = []
     for (let i = 0; i < current.length; ++i) {
-      if (interleavedIndices.includes(i)) {
-        newVertices.push(current[i])
+      let thisVertex = current[i]
+
+      if (fixedIndices.includes(i)) {
+        // Fixed points are copied over immediately
+        newVertices.push(thisVertex)
 
         continue
       }
 
-      // Get the distances and proportions to the neighboring vertices
-      let thisVertex = current[i]
       let prevVertex = current[i-1]
       let nextVertex = current[i+1]
 
-      if (prevVertex && nextVertex) { // should always happen... but treat as endpoint if not
+      if (prevVertex && nextVertex) {
+        // Get the distances and sampling proportions to the neighboring vertices. The difference between consecutive
+        // proportions tells us how much "band material" is in that section, and thus the magnitude of the force it
+        // exerts.
         let prevProp = proportions[i - 1]
         let thisProp = proportions[i]
         let nextProp = proportions[i + 1]
 
+        // Compute differences
         prevProp -= thisProp
         nextProp -= thisProp
 
-        let accelX = -(prevVertex.x - thisVertex.x) / prevProp + (nextVertex.x - thisVertex.x) / nextProp
-        let accelY = -(prevVertex.y - thisVertex.y) / prevProp + (nextVertex.y - thisVertex.y) / nextProp
-
-        accelX /= currentLen
-        accelY /= currentLen
-
-        const MIN_ACCEL = 0.001
-        const MAX_ACCEL = 0.3
-        const MIN_VEL = 0.1 / currentLen
-
-        if (Math.abs(accelX) > MAX_ACCEL) accelX = Math.sign(accelX) * MAX_ACCEL
-        if (Math.abs(accelY) > MAX_ACCEL) accelY = Math.sign(accelY) * MAX_ACCEL
-        if (Math.abs(accelX) < MIN_ACCEL) accelX = 0
-        if (Math.abs(accelY) < MIN_ACCEL) accelY = 0
-
+        // Super small proportions will cause numerical errors. These occur when the original chain is sampled very
+        // close (or on top of) a vertex. In this case, we treat the vertex as essentially the same as the vertex it
+        // is extremely close to.
         if (Math.abs(prevProp) < 0.00001) {
-          // numerical errors will accumulate here
           newVertices.push(prevVertex)
           continue
         } else if (Math.abs(nextProp) < 0.00001) {
           newVertices.push(nextVertex)
           continue
-        } else {
-          let vel = velocities[i]
-          vel.x += accelX
-          vel.y += accelY
-
-          vel.x *= VEL_DAMPENING_FACTOR
-          vel.y *= VEL_DAMPENING_FACTOR
-
-          if (Math.abs(vel.x) > MIN_VEL || Math.abs(vel.y) > MIN_VEL) {
-            isDead = false
-          }
         }
 
-        newVertices.push(new Vector2(thisVertex.x + velocities[i].x / VEL_SLOWDOWN_FACTOR, thisVertex.y + velocities[i].y / VEL_SLOWDOWN_FACTOR))
+        // Compute accelerations; one toward each neighboring vertex
+        let accelX = (thisVertex.x - prevVertex.x) / prevProp + (nextVertex.x - thisVertex.x) / nextProp
+        let accelY = (thisVertex.y - prevVertex.y) / prevProp + (nextVertex.y - thisVertex.y) / nextProp
+
+        // Tension is proportional to length, so we have to scale it
+        accelX /= currentLen
+        accelY /= currentLen
+
+        // Clamp to [-MAX_ACCEL, MAX_ACCEL]
+        if (Math.abs(accelX) > MAX_ACCEL) accelX = Math.sign(accelX) * MAX_ACCEL
+        if (Math.abs(accelY) > MAX_ACCEL) accelY = Math.sign(accelY) * MAX_ACCEL
+
+        // Apply acceleration and dampen velocity
+        let vel = velocities[i]
+        vel.x += accelX
+        vel.y += accelY
+
+        vel.x *= VEL_DAMPENING_FACTOR
+        vel.y *= VEL_DAMPENING_FACTOR
+
+        // If the velocity is larger than MIN_VEL in any component, the simulation is not yet dead
+        if (Math.abs(vel.x) > MIN_VEL || Math.abs(vel.y) > MIN_VEL)
+          isDead = false
+
+        // Compute next position
+        newVertices.push(new Vector2(thisVertex.x + velocities[i].x / VEL_SLOWDOWN_FACTOR,
+          thisVertex.y + velocities[i].y / VEL_SLOWDOWN_FACTOR))
       } else {
+        // Reached if prevVertex or nextVertex do not exist--shouldn't happen, but in case, treat as a fixed point
         newVertices.push(thisVertex)
       }
     }
 
     if (isDead) {
-      this.snapToNewVertices(this.fixedTargetVertices, true)
+      // When the physics are dead, do a force snap (no simulation), which also sets inMotion to false
+      this.snapToNewVertices(this.targetFixedVertices, true)
     } else {
+      // Copy over new vertices
       this.currentVertices = newVertices
     }
+
+    this.lastTick = performance.now()
   }
 
   _update () {
-    for (let i = 0; i < 30; ++i) this.physicsTick()
+    // Note that performance.now() returns a timestamp in milliseconds (to roughly 0.1 ms in Chrome, lower in FF)
+    let ticksNeeded = (performance.now() - this.lastTick) / 1000 * PHYSICS_TPS
+    if (ticksNeeded > MAX_TICKS_PER_FRAME)
+      ticksNeeded = MAX_TICKS_PER_FRAME
 
-    let vertices = this.drawnVertices.map(v => `${v.x},${v.y}`).join(" ")
+    for (let i = 0; i < ticksNeeded; ++i) this.physicsTick()
+
+    // Convert to SVG property string
+    let vertices = this.drawVertices.map(v => `${v.x},${v.y}`).join(" ")
 
     this.domElement.setAttribute("points", vertices)
     this.domElement.setAttribute("fill", "none")
@@ -665,9 +722,6 @@ class SnapChain extends VisGroup {
         }
       }
     }
-
-
-
   }
 }
 
@@ -713,7 +767,7 @@ class SnapVisualization extends VisGroup {
 }
 
 const vis = new SnapVisualization()
-document.body.appendChild(vis.domElement)
+document.getElementById("drawing-surface").appendChild(vis.domElement)
 
 let snapChain = new SnapChain()
 snapChain.setSnapElements([ 'E', 'E', 'E' ])
