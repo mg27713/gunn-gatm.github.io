@@ -138,6 +138,7 @@ class CircleComponent extends VisComponent {
     this.x = 50
     this.y = 50
     this.r = 40
+    // Unused
     this.fill = "red"
     this.stroke = "black"
     this.strokeWidth = 3
@@ -151,9 +152,12 @@ class CircleComponent extends VisComponent {
     this.domElement.setAttribute("cx", this.x)
     this.domElement.setAttribute("cy", this.y)
     this.domElement.setAttribute("r", this.r)
-    this.domElement.setAttribute("fill", this.fill)
-    this.domElement.setAttribute("stroke", this.stroke)
-    this.domElement.setAttribute("stroke-width",  this.strokeWidth)
+
+    this.domElement.classList.add("snap-post")
+
+    // this.domElement.setAttribute("fill", this.fill)
+    // this.domElement.setAttribute("stroke", this.stroke)
+    // this.domElement.setAttribute("stroke-width",  this.strokeWidth)
   }
 }
 
@@ -655,8 +659,10 @@ class StringComponent extends VisComponent {
     this.domElement.setAttribute("points", vertices)
     this.domElement.setAttribute("fill", "none")
 
-    this.domElement.setAttribute("stroke", "black")
-    this.domElement.setAttribute("stroke-width", 3)
+    this.domElement.classList.add("snap-string")
+
+    // this.domElement.setAttribute("stroke", "black")
+    // this.domElement.setAttribute("stroke-width", 3)
   }
 }
 
@@ -750,8 +756,6 @@ class SnapChain extends VisGroup {
 
     let state = this.history.pop()
     this.setState(state, false)
-
-    console.log(state)
   }
 
   setSnapElements (elements) {
@@ -793,8 +797,6 @@ class SnapChain extends VisGroup {
 
     opts.height = totalHeight
     this.snapElements = [ composeElements(elems) ]
-
-    console.log(opts)
 
     this.needsRestringing = true
   }
