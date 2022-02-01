@@ -164,6 +164,8 @@ let stringRes = 20
 // Whether to do a boing at all :(
 let doBoing = true
 
+const DEFAULT_HEIGHT = 100
+
 class VisGroup extends VisComponent {
   constructor () {
     super()
@@ -733,7 +735,7 @@ class SnapChain extends VisGroup {
     this.history = []
     this.setState({
       snapElements: [],
-      displayOpts: { width: 100, height: 150, offsetX: 100, offsetY: 100, postStyle: { radius: 5, stroke: "black", strokeWidth: 3, fill: "red" } }
+      displayOpts: { width: 100, height: DEFAULT_HEIGHT, offsetX: 100, offsetY: 100, postStyle: { radius: 5, stroke: "black", strokeWidth: 3, fill: "red" } }
     }, true)
   }
 
@@ -961,6 +963,7 @@ let draggingElem = null // SnapChain currently being dragged around
 
 function addItems () {
   let items = document.getElementById("items")
+  let squishCancel = -1
 
   for (let elem of Object.keys(textbookNaming)) {
     let wrapper = document.createElement("button")
@@ -983,9 +986,26 @@ function addItems () {
     items.appendChild(wrapper)
 
     wrapper.onclick = () => {
-      if (mainChain.displayOpts.height !== DEFAULT_HEIGHT) mainChain.displayOpts.height = DEFAULT_HEIGHT // squish down
-      else mainChain.forceSnap = true
-      mainChain.addElement(elem)
+      if (mainChain.displayOpts.height !== DEFAULT_HEIGHT) {
+        // squish down
+        let orig = mainChain.displayOpts.height
+        let delta = (orig - DEFAULT_HEIGHT) / 100 // squish down in 100 frames
+        clearInterval(squishCancel)
+        squishCancel = setInterval(() => {
+          mainChain.forceSnap = true
+          if ((mainChain.displayOpts.height -= delta) < DEFAULT_HEIGHT) {
+            mainChain.displayOpts.height = DEFAULT_HEIGHT
+            clearInterval(squishCancel)
+            mainChain.addElement(elem)
+          }
+
+          mainChain.needsRestringing = true
+        }, 1 / 60)
+
+      } else {
+        mainChain.forceSnap = true
+        mainChain.addElement(elem)
+      }
     }
 
     wrapper.onmousedown = () => {
@@ -995,8 +1015,6 @@ function addItems () {
     }
   }
 }
-
-const DEFAULT_HEIGHT = 100
 
 function dropItem() {
   if (selectedElem) {
