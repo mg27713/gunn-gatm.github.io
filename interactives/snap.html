@@ -4,76 +4,7 @@
     <meta charset="UTF-8">
     <title>Snap</title>
 
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-        }
-
-        #drawing-surface {
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .sidebar {
-            position: absolute;
-            right: 0;
-            width: 500px;
-            height: 100%;
-            background-color: rgba(0, 0, 15, 10%);
-            padding: 15px;
-        }
-
-        h1 {
-            text-align: center;
-        }
-
-        .items {
-            display: flex;
-            flex-wrap: wrap;
-        }
-
-        .item-wrapper {
-            margin-left: 20px;
-            margin-right: 20px;
-            margin-bottom: 10px;
-            flex-grow: 1;
-        }
-
-        .item-wrapper > p {
-            text-align: center;
-            font-size: 20px;
-        }
-
-        .item-preview {
-            margin-left: 20px;
-            margin-right: 20px;
-            margin-bottom: 10px;
-        }
-
-        #giant-button {
-            font-size: 100px;
-            padding: 5px;
-            display: block;
-            margin: 0 auto;
-        }
-
-        .smol-button {
-            margin: 0 auto;
-        }
-
-        .snap-string {
-            stroke: black;
-            stroke-width: 3;
-        }
-
-        .snap-post {
-            fill: red;
-            stroke: black;
-            stroke-width: 3;
-        }
-    </style>
+    <link rel="stylesheet" href="snap.css">
 </head>
 <body>
 
@@ -89,21 +20,22 @@
     <button class="smol-button" onclick="mainChain.undo()">Undo</button>
     <h2>Advanced</h2>
     <div class="slider">
-        <label for="boing-slider"/>Boing factor</label>
+        <label for="boing-slider">Boing factor</label>
         <input type="range" min="0" max="1000" id="boing-slider" />
     </div>
     <div class="slider">
-        <label for="boing-res" />Boing resolution</label>
+        <label for="boing-res">Boing resolution</label>
         <input type="range" min="20" max="100" id="boing-res" />
     </div>
     <div class="slider">
-        <label for="boing-tps" />Boing ticks per second</label>
+        <label for="boing-tps">Boing ticks per second</label>
         <input type="range" min="8" max="1000" id="boing-tps" />
     </div>
     <div class="checkbox">
-        <label for="do-boing" />Show boing</label>
+        <label for="do-boing">Show boing</label>
         <input type="checkbox" id="do-boing" checked />
     </div>
+    <button class="smol-button switch-theme" onclick="switchTheme()">Switch theme</button>
 </div>
 
 <script src="snap.js"></script>
