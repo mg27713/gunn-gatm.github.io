@@ -965,6 +965,8 @@ function addItems () {
   let items = document.getElementById("items")
   let squishCancel = -1
 
+  let MUST_ADD_AFTER_SQUISH = []
+
   for (let elem of Object.keys(textbookNaming)) {
     let wrapper = document.createElement("button")
     wrapper.classList.add("item-wrapper")
@@ -990,13 +992,24 @@ function addItems () {
         // squish down
         let orig = mainChain.displayOpts.height
         let delta = (orig - DEFAULT_HEIGHT) / 100 // squish down in 100 frames
+
+        // Allows for multiple elements to be added after a squish
+        MUST_ADD_AFTER_SQUISH.push(elem)
+
         clearInterval(squishCancel)
         squishCancel = setInterval(() => {
           mainChain.forceSnap = true
+
           if ((mainChain.displayOpts.height -= delta) < DEFAULT_HEIGHT) {
             mainChain.displayOpts.height = DEFAULT_HEIGHT
             clearInterval(squishCancel)
-            mainChain.addElement(elem)
+
+            setTimeout(() => {
+              mainChain.forceSnap = true
+              MUST_ADD_AFTER_SQUISH.forEach(e => mainChain.addElement(e))
+              MUST_ADD_AFTER_SQUISH = []
+              mainChain.needsRestringing = true
+            }, 100) // subtle timeout
           }
 
           mainChain.needsRestringing = true
