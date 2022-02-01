@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Snap</title>
+
+    <link rel="stylesheet" href="snap.css">
+</head>
+<body>
+
+
+<div id="drawing-surface"></div>
+<div class="sidebar">
+    <h1>It's a Snap!</h1>
+
+    <div class="items" id="items"></div>
+
+    <button id="giant-button">Snap</button>
+    <button class="smol-button" onclick="mainChain.reset()">Reset</button>
+    <button class="smol-button" onclick="mainChain.undo()">Undo</button>
+    <h2>Advanced</h2>
+    <div class="slider">
+        <label for="boing-slider">Boing factor</label>
+        <input type="range" min="0" max="1000" id="boing-slider" />
+    </div>
+    <div class="slider">
+        <label for="boing-res">Boing resolution</label>
+        <input type="range" min="20" max="100" id="boing-res" />
+    </div>
+    <div class="slider">
+        <label for="boing-tps">Boing ticks per second</label>
+        <input type="range" min="8" max="1000" id="boing-tps" />
+    </div>
+    <div class="checkbox">
+        <label for="do-boing">Show boing</label>
+        <input type="checkbox" id="do-boing" checked />
+    </div>
+    <button class="smol-button switch-theme" onclick="switchTheme()">Switch theme</button>
+</div>
+
+<script src="snap.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+import * as THREE from 'https://cdn.skypack.dev/three@0.132.2'
+import { GUI } from 'https://unpkg.com/dat.gui@0.7.7/build/dat.gui.module.js'
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/OrbitControls.js'
+import { TransformControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/TransformControls.js'
+import { CSS2DObject, CSS2DRenderer } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/renderers/CSS2DRenderer.js'
