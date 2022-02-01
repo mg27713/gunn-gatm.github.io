@@ -949,7 +949,7 @@ boingSlider.addEventListener("input", () => {
 
 boingResSlider.addEventListener("input", () => { setBoingRes(boingResSlider.value) })
 boingTPSSlider.addEventListener('input', () => { setTPS(boingTPSSlider.value ** 2)})
-boingCheckbox.addEventListener("input", () => { doBoing = !!boingCheckbox.value })
+boingCheckbox.addEventListener("input", () => { doBoing = !!boingCheckbox.checked })
 
 let selectedElem = '' // 'I', '', etc.
 let draggingElem = null // SnapChain currently being dragged around
