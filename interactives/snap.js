@@ -991,7 +991,7 @@ function addItems () {
       if (mainChain.displayOpts.height !== DEFAULT_HEIGHT) {
         // squish down
         let orig = mainChain.displayOpts.height
-        let delta = (orig - DEFAULT_HEIGHT) / 100 // squish down in 100 frames
+        let delta = (orig - DEFAULT_HEIGHT) / 60 // squish down in 60 frames
 
         // Allows for multiple elements to be added after a squish
         MUST_ADD_AFTER_SQUISH.push(elem)
