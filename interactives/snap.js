@@ -708,6 +708,8 @@ class SnapChain extends VisGroup {
     this.displayOpts = {}
     this.needsRestringing = false
 
+    this.forceSnap = false
+
     this.reset()
   }
 
@@ -841,8 +843,11 @@ class SnapChain extends VisGroup {
 
     // Setting to empty clears the string
       for (let i = 0; i < stringVertices.length; ++i) {
-        this.stringComponents[i].snapToNewVertices(stringVertices[i], false)
+        this.stringComponents[i].snapToNewVertices(stringVertices[i], this.forceSnap)
       }
+
+      // one-time use
+      this.forceSnap = false
 
     this.needsRestringing = false
   }
@@ -979,6 +984,7 @@ function addItems () {
 
     wrapper.onclick = () => {
       if (mainChain.displayOpts.height !== DEFAULT_HEIGHT) mainChain.displayOpts.height = DEFAULT_HEIGHT // squish down
+      else mainChain.forceSnap = true
       mainChain.addElement(elem)
     }
 
