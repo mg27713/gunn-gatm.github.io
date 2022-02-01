@@ -645,7 +645,7 @@ class StringComponent extends VisComponent {
     let timeSince = (performance.now() - this.lastTick) / 1000
     let accumTime = 0, ticks = 0
 
-    for (; ticks < MAX_TICKS_PER_FRAME && accumTime < timeSince; accumTime += this.physicsTick());
+    for (; ticks < MAX_TICKS_PER_FRAME && accumTime < timeSince; accumTime += this.physicsTick(), ++ticks);
 
     // Convert to SVG property string
     let vertices = this.drawVertices.map(v => `${v.x},${v.y}`).join(" ")
