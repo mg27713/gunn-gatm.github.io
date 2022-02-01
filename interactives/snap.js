@@ -138,6 +138,9 @@ class CircleComponent extends VisComponent {
     this.x = 50
     this.y = 50
     this.r = 40
+    this.fill = "red"
+    this.stroke = "black"
+    this.strokeWidth = 3
   }
 
   init () {
@@ -148,11 +151,18 @@ class CircleComponent extends VisComponent {
     this.domElement.setAttribute("cx", this.x)
     this.domElement.setAttribute("cy", this.y)
     this.domElement.setAttribute("r", this.r)
-    this.domElement.setAttribute("fill", "red")
-    this.domElement.setAttribute("stroke", "black")
-    this.domElement.setAttribute("stroke-width", 3)
+    this.domElement.setAttribute("fill", this.fill)
+    this.domElement.setAttribute("stroke", this.stroke)
+    this.domElement.setAttribute("stroke-width",  this.strokeWidth)
   }
 }
+
+// Adjusts velocity dampening (0 is not much boing, 1 is lots of boing)
+let boingFactor = 1
+// How many pieces to simulate the string as
+let stringRes = 20
+// Whether to do a boing at all :(
+let doBoing = true
 
 class VisGroup extends VisComponent {
   constructor () {
@@ -329,10 +339,6 @@ function arange (start, end, count) {
   return ret
 }
 
-function isReductionOf (newVertices, oldVertices) {
-
-}
-
 // A complete state is as follows:
 // currentVertices: Vector2[s]
 // currentVertexVelocities: Vector2[s]
@@ -369,10 +375,10 @@ function interpolateVertices (original, target, prop) {
 // proportional to the string length.
 
 // How many physics ticks to run per second (independent of frame rate)
-const PHYSICS_TPS = 1000
+let PHYSICS_TPS = 1000
 
 // Max physics ticks per frame (to avoid lag)
-const MAX_TICKS_PER_FRAME = 100
+const MAX_TICKS_PER_FRAME = 1000
 
 class StringComponent extends VisComponent {
   constructor () {
@@ -383,6 +389,8 @@ class StringComponent extends VisComponent {
 
     // Whether to do any physics at all
     this.inMotion = false
+    // Whether to do a boing
+    this.doBoing = true
     // Last time at which a tick was run; used to calculate how many ticks to do per frame
     this.lastTick = performance.now()
 
@@ -400,21 +408,42 @@ class StringComponent extends VisComponent {
     this.fixedVertices = []
     // Indices of the fixed vertices within currentVertices
     this.fixedIndices = []
+
+    // Target vertices given by snapToNewVertices
+    this.givenTarget = []
   }
 
   // Initialize the movement from the current position to targetFixedVertices (which determines the resulting position)
   initSimulation () {
     // How many pieces to subdivide the string into
-    const SIMULATION_PT_COUNT = 20
+    const SIMULATION_PT_COUNT = stringRes
+    this.lastTick = performance.now()
 
-    if (this.currentVertices.length < 2) {
-      // Nothing to interpolate from if there aren't already two vertices, so force snap and return immediately
-      this.snapToNewVertices(this.targetFixedVertices, true)
+    if (this.currentVertices.length < 2 || this.givenTarget.length < 2) {
+      // Nothing to interpolate from if there aren't two vertices, so force snap and return immediately
+      this.snapToNewVertices(this.givenTarget, true)
       return
     }
 
-    // Get proportions of each vertex along the target path
-    let target = this.targetFixedVertices
+    let doBoing = this.doBoing
+
+    if (!doBoing) {
+      let currentProportions = getVertexProportions(this.currentVertices)
+      let targetProportions = getVertexProportions(this.targetFixedVertices)
+
+      let allProportions = currentProportions.concat(targetProportions).sort((a, b) => a - b)
+
+      // Linearly move all fixed vertices to their destination
+      this.targetFixedVertices = sampleChain(this.givenTarget, allProportions)
+      this.originalFixedVertices = sampleChain(this.currentVertices, allProportions)
+      this.fixedMovementProportion = 0
+
+      return
+    }
+
+    // Get proportions of each vertex along the target path. In the boing case, the target fixed vertices are also the
+    // given vertices
+    let target = this.targetFixedVertices = this.givenTarget
     let targetCount = target.length
     let targetProportions = getVertexProportions(target)
 
@@ -457,8 +486,6 @@ class StringComponent extends VisComponent {
     // Initialize all velocities to <0, 0>
     let vVel = this.currentVertexVelocities = []
     for (let i = 0; i < this.currentVertices.length; ++i) vVel.push(new Vector2(0, 0))
-
-    this.fixedMovementProportion = 0
   }
 
   // Snap the string to new vertices; force determines whether the snap is instant or subject to simulation
@@ -468,13 +495,14 @@ class StringComponent extends VisComponent {
     this.inMotion = !force
     if (force) {
       // Immediately copy over the vertices
-      this.currentVertices = vertices
+      this.currentVertices = this.drawVertices = vertices
     } else {
-      this.targetFixedVertices = vertices
+      this.givenTarget = vertices
+      this.doBoing = doBoing
       this.initSimulation()
 
       // Immediately move fixed points to target for now
-      this.fixedMovementProportion = 1
+      if (doBoing) this.fixedMovementProportion = 1
     }
   }
 
@@ -482,16 +510,30 @@ class StringComponent extends VisComponent {
     this.domElement = document.createElementNS("http://www.w3.org/2000/svg", "polyline")
   }
 
-  // One "tick" of the rubber band movement
+  // One "tick" of the rubber band movement. Returns the number of simulated seconds completed
   physicsTick () {
     this.drawVertices = this.currentVertices
-    if (!this.inMotion) return
+    if (!this.inMotion) return Infinity
+
+    if (!this.doBoing) {
+      // Boring handler
+      this.fixedMovementProportion += 0.01
+      this.fixedVertices = this.currentVertices = interpolateVertices(this.originalFixedVertices, this.targetFixedVertices, this.fixedMovementProportion)
+
+      if (this.fixedMovementProportion >= 1) {
+        this.snapToNewVertices(this.givenTarget, true)
+        return Infinity
+      }
+
+      this.lastTick = performance.now()
+      return 1 / 60
+    }
 
     // Factor by which the stored velocity is scaled DOWN to actually add to the position vector
     const VEL_SLOWDOWN_FACTOR = 5
 
     // Factor by which the stored velocity is dampened every tick (loss of energy)
-    const VEL_DAMPENING_FACTOR = 1 / 1.01
+    const VEL_DAMPENING_FACTOR = 1 / (1.001 + (1 - boingFactor) * 0.03)
 
     // Clamp acceleration to below this value
     const MAX_ACCEL = 0.3
@@ -588,22 +630,22 @@ class StringComponent extends VisComponent {
 
     if (isDead) {
       // When the physics are dead, do a force snap (no simulation), which also sets inMotion to false
-      this.snapToNewVertices(this.targetFixedVertices, true)
+      this.snapToNewVertices(this.givenTarget, true)
     } else {
       // Copy over new vertices
       this.currentVertices = newVertices
     }
 
     this.lastTick = performance.now()
+    return 20 / (PHYSICS_TPS * stringRes)
   }
 
   _update () {
     // Note that performance.now() returns a timestamp in milliseconds (to roughly 0.1 ms in Chrome, lower in FF)
-    let ticksNeeded = (performance.now() - this.lastTick) / 1000 * PHYSICS_TPS
-    if (ticksNeeded > MAX_TICKS_PER_FRAME)
-      ticksNeeded = MAX_TICKS_PER_FRAME
+    let timeSince = (performance.now() - this.lastTick) / 1000
+    let accumTime = 0, ticks = 0
 
-    for (let i = 0; i < ticksNeeded; ++i) this.physicsTick()
+    for (; ticks < MAX_TICKS_PER_FRAME && accumTime < timeSince; accumTime += this.physicsTick());
 
     // Convert to SVG property string
     let vertices = this.drawVertices.map(v => `${v.x},${v.y}`).join(" ")
@@ -616,6 +658,43 @@ class StringComponent extends VisComponent {
   }
 }
 
+function isTypedArray (arr) {
+  return ArrayBuffer.isView(arr) && !(arr instanceof DataView)
+}
+
+// copied from grapheme
+/**
+ * Deep clone an object, not checking for circularity or other weirdness, optionally cloning arrays
+ * @param object
+ * @param opts
+ */
+function deepClone (object, opts = {}) {
+  opts.cloneArrays = opts.cloneArrays ?? true
+
+  return deepCloneInternal(object, opts)
+}
+
+function deepCloneInternal (object, opts = {}) {
+  if (typeof object !== 'object') return object
+
+  if (Array.isArray(object)) {
+    return opts.cloneArrays
+      ? object.map(val => deepCloneInternal(val, opts))
+      : object
+  } else if (isTypedArray(object)) {
+    return opts.cloneArrays ? new object.constructor(object) : object
+  }
+
+  let ret = {}
+  for (let key in object) {
+    if (object.hasOwnProperty(key)) {
+      ret[key] = deepClone(object[key], opts)
+    }
+  }
+
+  return ret
+}
+
 class SnapChain extends VisGroup {
   constructor () {
     super()
@@ -626,8 +705,49 @@ class SnapChain extends VisGroup {
 
     this.stringComponents = []
 
-    this.displayOpts = { width: 100, height: 150, offsetX: 100, offsetY: 100 }
+    this.displayOpts = {}
     this.needsRestringing = false
+
+    this.reset()
+  }
+
+  getState () {
+    return { snapElements: this.snapElements.slice(), displayOpts: { ...this.displayOpts } }
+  }
+
+  setState (state, addToHistory=true) {
+    this.snapElements = state.snapElements.slice()
+    this.displayOpts = deepClone(state.displayOpts)
+
+    if (addToHistory) this.history.push(deepClone(state))
+    this.needsRestringing = true
+  }
+
+  pushState () {
+    this.setState({ snapElements: this.snapElements, displayOpts: this.displayOpts })
+  }
+
+  reset () {
+    this.history = []
+    this.setState({
+      snapElements: [],
+      displayOpts: { width: 100, height: 150, offsetX: 100, offsetY: 100, postStyle: { radius: 5, stroke: "black", strokeWidth: 3, fill: "red" } }
+    }, true)
+  }
+
+  undo () {
+    if (this.history.length === 1) {
+      this.setState(this.history[0], false)
+      return
+    } else if (!this.history.length) {
+      this.reset()
+      return
+    }
+
+    let state = this.history.pop()
+    this.setState(state, false)
+
+    console.log(state)
   }
 
   setSnapElements (elements) {
@@ -648,6 +768,38 @@ class SnapChain extends VisGroup {
     for (let i = 0; i < this.snapWidth; ++i) {
       this.addChild(sc[i])
     }
+  }
+
+  addElement (e, addToHistory=true) {
+    if (addToHistory) this.pushState()
+
+    this.snapElements.push(toElement(e))
+    this.needsRestringing = true
+  }
+
+  snap (addToHistory=true) {
+    // change width and height, snapElements accordingly to look like a snap
+    let elems = this.snapElements
+    if (!elems.length) return
+
+    if (addToHistory) this.pushState()
+
+    let opts = this.displayOpts
+    let totalHeight = elems.length * opts.height
+
+    opts.height = totalHeight
+    this.snapElements = [ composeElements(elems) ]
+
+    console.log(opts)
+
+    this.needsRestringing = true
+  }
+
+  setPosition (x, y) {
+    this.displayOpts.offsetX = x
+    this.displayOpts.offsetY = y
+
+    this.needsRestringing = true
   }
 
   buildStringComponents () {
@@ -683,11 +835,14 @@ class SnapChain extends VisGroup {
     }
 
     // Reorder so strings are left to right, starting from the top
-    stringVertices.sort((vs1, vs2) => vs1[0].x - vs2[0].x)
-
-    for (let i = 0; i < stringVertices.length; ++i) {
-      this.stringComponents[i].snapToNewVertices(stringVertices[i], false)
+    if (stringVertices[0].length) {
+      stringVertices.sort((vs1, vs2) => vs1[0].x - vs2[0].x)
     }
+
+    // Setting to empty clears the string
+      for (let i = 0; i < stringVertices.length; ++i) {
+        this.stringComponents[i].snapToNewVertices(stringVertices[i], false)
+      }
 
     this.needsRestringing = false
   }
@@ -708,7 +863,10 @@ class SnapChain extends VisGroup {
 
           element.x = offsetX + opts.width * j
           element.y = offsetY + opts.height * i
-          element.r = 10
+          element.r = opts.postStyle.radius
+          element.stroke = opts.postStyle.stroke
+          element.strokeWidth = opts.postStyle.strokeWidth
+          element.fill = opts.postStyle.fill
 
           this.addChild(element)
         }
@@ -758,13 +916,101 @@ class SnapVisualization extends VisGroup {
   }
 }
 
+// Attach boing slider
+const boingSlider = document.getElementById("boing-slider")
+const boingResSlider = document.getElementById("boing-res")
+const boingTPSSlider = document.getElementById("boing-tps")
+const boingCheckbox = document.getElementById("do-boing")
+
+function setBoingFactor (f) {
+  boingSlider.value = (f * 1000) | 0
+  boingFactor = f
+}
+
+function setBoingRes (r) {
+  r = Math.min(Math.max(r, 20), 100) | 0
+  boingResSlider.value = r
+  stringRes = r
+}
+
+function setTPS (t) {
+  t = Math.min(Math.max(t, 60), 1000000)
+  boingTPSSlider.value = Math.sqrt(t) | 0
+  PHYSICS_TPS = t
+}
+
+setBoingFactor(0.1)
+setBoingRes(20)
+setTPS(1000)
+
+boingSlider.addEventListener("input", () => {
+  setBoingFactor(boingSlider.value / 1000)
+})
+
+boingResSlider.addEventListener("input", () => { setBoingRes(boingResSlider.value) })
+boingTPSSlider.addEventListener('input', () => { setTPS(boingTPSSlider.value ** 2)})
+boingCheckbox.addEventListener("input", () => { doBoing = !!boingCheckbox.value })
+
+let selectedElem = '' // 'I', '', etc.
+let draggingElem = null // SnapChain currently being dragged around
+
+function addItems () {
+  let items = document.getElementById("items")
+
+  for (let elem of Object.keys(textbookNaming)) {
+    let wrapper = document.createElement("button")
+    wrapper.classList.add("item-wrapper")
+
+    wrapper.innerHTML = `<p>${elem}</p>`
+    let vis = new SnapVisualization()
+    let chain = new SnapChain()
+
+    vis.setDims(10 + 30 * 2 + 10, 70)
+    chain.displayOpts.width = 30
+    chain.displayOpts.height = 50
+    chain.setPosition(10, 10)
+    chain.setSnapElements([ elem ])
+    vis.addChild(chain)
+    vis.render()
+
+    wrapper.appendChild(vis.domElement)
+    vis.domElement.classList.add("item-preview")
+    items.appendChild(wrapper)
+
+    wrapper.onclick = () => {
+      if (mainChain.displayOpts.height !== DEFAULT_HEIGHT) mainChain.displayOpts.height = DEFAULT_HEIGHT // squish down
+      mainChain.addElement(elem)
+    }
+
+    wrapper.onmousedown = () => {
+      // TODO
+      console.log("creating " + elem)
+      selectedElem = elem
+    }
+  }
+}
+
+const DEFAULT_HEIGHT = 100
+
+function dropItem() {
+  if (selectedElem) {
+    console.log("dropping " + selectedElem)
+  }
+}
+
+document.body.onmouseup = dropItem
+
+addItems()
+
 const vis = new SnapVisualization()
 document.getElementById("drawing-surface").appendChild(vis.domElement)
 
-let snapChain = new SnapChain()
-snapChain.setSnapElements([ 'E', 'E', 'E' ])
+let mainChain = new SnapChain()
+vis.addChild(mainChain)
 
-vis.addChild(snapChain)
+document.getElementById("giant-button").onclick = () => {
+  mainChain.snap()
+}
 
 function render () {
   vis.resize()
