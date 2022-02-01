@@ -3,6 +3,23 @@ html {
         "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+body {
+    background-color: white;
+    color: black;
+    --sidebar: #f3f4f6;
+    --content: white;
+    --buttons: #f9fafb;
+}
+
+body.dark {
+    background-color: #0f172a;
+    color: white;
+    --sidebar: #1e293b;
+    --content: #334155;
+    --buttons: #334155;
+    color-scheme: dark;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -20,12 +37,17 @@ html {
     width: 500px;
     height: 100%;
     padding: 15px;
-    background-color: #f3f4f6;
+    background-color: var(--sidebar);
 }
 
 h1 {
     text-align: center;
     margin-bottom: 0.75rem;
+}
+
+button {
+    cursor: pointer;
+    color: inherit;
 }
 
 .items {
@@ -39,10 +61,9 @@ h1 {
     border: none;
     flex-grow: 1;
     padding: 0.5rem;
-    background-color: white;
+    background-color: var(--content);
     border-radius: 0.25rem;
     transition: all 100ms;
-    cursor: pointer;
 }
 
 .item-wrapper:hover {
@@ -67,9 +88,8 @@ h1 {
     margin: 0 auto;
     border: none;
     border-radius: 0.25rem;
-    background-color: #f9fafb;
+    background-color: var(--buttons);
     transition: all 100ms;
-    cursor: pointer;
 }
 
 #giant-button:hover {
@@ -82,9 +102,8 @@ h1 {
     padding: 0.5rem;
     border-radius: 0.25rem;
     margin-bottom: 1rem;
-    background-color: #f9fafb;
+    background-color: var(--buttons);
     transition: all 100ms;
-    cursor: pointer;
 }
 
 .smol-button:hover {
@@ -93,4 +112,8 @@ h1 {
 
 h2 {
     margin-bottom: 0.5rem;
+}
+
+.switch-theme {
+    margin-top: 1rem;
 }
