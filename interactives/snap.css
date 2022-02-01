@@ -9,6 +9,8 @@ body {
     --sidebar: #f3f4f6;
     --content: white;
     --buttons: #f9fafb;
+    --post-fill: #ff0000;
+    --string-color: #000000;
 }
 
 body.dark {
@@ -17,6 +19,8 @@ body.dark {
     --sidebar: #1e293b;
     --content: #334155;
     --buttons: #334155;
+    --post-fill: #0022dd;
+    --string-color: #ffffff;
     color-scheme: dark;
 }
 
@@ -116,4 +120,15 @@ h2 {
 
 .switch-theme {
     margin-top: 1rem;
+}
+
+.snap-string {
+    stroke: var(--string-color);
+    stroke-width: 3;
+}
+
+.snap-post {
+    fill: var(--post-fill);
+    stroke: var(--string-color);
+    stroke-width: 3;
 }
