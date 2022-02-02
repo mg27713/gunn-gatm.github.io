@@ -166,3 +166,18 @@ h2 {
     stroke-linecap: butt;
     stroke-linejoin: miter;
 }
+
+.widget-arrow {
+    fill: none;
+    stroke-width: 2;
+}
+
+.x-arrow {
+    stroke: red;
+    marker-end: url(#x-arrow);
+}
+
+.y-arrow {
+    stroke: green;
+    marker-end: url(#y-arrow);
+}
