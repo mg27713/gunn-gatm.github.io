@@ -132,3 +132,37 @@ h2 {
     stroke: var(--string-color);
     stroke-width: 3;
 }
+
+.symmetry-groups-wrapper, body {
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+
+#drawing-surface {
+    height: 100%;
+    width: calc(100% - 500px);
+}
+
+.text-svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.text-svg > *, .text-svg {
+    pointer-events: none;
+}
+
+.text-label {
+    font-size: 20px;
+    text-anchor: middle;
+}
+
+.text-shadow {
+    paint-order: stroke;
+    stroke: white;
+    fill: white;
+    stroke-width: 4px;
+    stroke-linecap: butt;
+    stroke-linejoin: miter;
+}
