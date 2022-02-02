@@ -60,8 +60,10 @@ var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 70, 0, 10, 10000 );
 var clickableObjects = [];
 
+// Plane of the grid
+let workingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0))
+
 let grid = new THREE.GridHelper(gridSize, gridDivisions);
-grid.position.y = 0
 scene.add(grid)
 
 window.grid = grid
@@ -74,7 +76,7 @@ let DOMList = {
 
 function allow2DRotation (v) {
   if (typeof v !== "boolean") {
-    throw new Error("allow2DRotation must be a boolean")
+    throw new Error("allow2DRotation must be a boolean") // thanks github copilot
   }
 
   if (!v) {
@@ -87,6 +89,13 @@ function allow2DRotation (v) {
 function allow3DRotation (v) {
   if (typeof v !== "boolean") {
     throw new Error("allow3DRotation must be a boolean")
+  }
+
+  if (!v) {
+    setDefaultCamera()
+    orbitControls.maxPolarAngle = 0 // prevent any movement in that direction
+  } else {
+    orbitControls.maxPolarAngle = Math.PI / 2 - 0.1 // prevent from going under the grid
   }
 }
 
@@ -154,8 +163,7 @@ function drawTextElements(elems) {
     }
 
     dom.textContent = e.text
-    dom.setAttributeNS(null, "x", +e.x)
-    dom.setAttributeNS(null, "y", +e.y)
+    setElemProps(dom, { x: e.x, y: e.y })
   }
 
   // Remove unused text elements
@@ -190,6 +198,17 @@ function getOrientatorGroup () {
   return orientatorGroup = { g: o, xLabel, yLabel, xArrow, yArrow }
 }
 
+function setElemProps (textElem, dict) {
+  for (let [ name, val ] of Object.entries(dict)) {
+    if (name === "text") {
+      textElem.textContent = val
+    } else
+    textElem.setAttributeNS(null, name, val)
+  }
+}
+
+let orientatorRaycaster = new THREE.Raycaster()
+
 function drawSVGOrientator () {
   // A little widget in the bottom left that shows which direction is x and y
 
@@ -199,21 +218,36 @@ function drawSVGOrientator () {
 
   let size = DOM.drawingSurface.getBoundingClientRect()
 
-  let corner = new THREE.Vector2(SPACING, size.height - SPACING)
+  let V2 = THREE.Vector2
+  let V3 = THREE.Vector3
 
-  let xDisp = new THREE.Vector2(1, 0)
-  let yDisp = new THREE.Vector2(0, 1)
+  let samplingCorner = new V2(size.height / 2, size.height / 2)
+  let corner = new V2(SPACING, size.height - SPACING)
+
+  // Compute where the corner lies on the plane. Janky, but whatever
+  orientatorRaycaster.setFromCamera(domToDrawCoords(samplingCorner), camera)
+  let intersects = new V3()
+
+  orientatorRaycaster.ray.intersectPlane(workingPlane, intersects)
+
+  let xDisp = drawToDOMCoords(intersects.clone().add(new V3(1, 0, 0)).project(camera)).sub(samplingCorner)
+  let yDisp = drawToDOMCoords(intersects.clone().add(new V3(0, 0, 1)).project(camera)).sub(samplingCorner)
 
   xDisp = xDisp.normalize().multiplyScalar(ARROW_LENGTH)
-  yDisp = yDisp.normalize().multiplyScalar(ARROW_LENGTH)
+  yDisp = yDisp.normalize().multiplyScalar(-ARROW_LENGTH)
 
   function toPolylineV (v1, v2) {
     return `${v1.x},${v1.y} ${v2.x},${v2.y}`
   }
 
+  if (![xDisp.x, yDisp.x, xDisp.y, yDisp.y].every(isFinite)) return
+
   let g = getOrientatorGroup()
-  g.xArrow.setAttributeNS(null, "points", toPolylineV(corner, corner.clone().add(xDisp)))
-  g.yArrow.setAttributeNS(null, "points", toPolylineV(corner, corner.clone().add(yDisp)))
+  setElemProps(g.xArrow, { points: toPolylineV(corner, corner.clone().add(xDisp)) })
+  setElemProps(g.yArrow, { points: toPolylineV(corner, corner.clone().add(yDisp)) })
+
+  setElemProps(g.xLabel, { text: "+x", ...corner.clone().add(xDisp.normalize().multiplyScalar(TEXT_SPACING)) })
+  setElemProps(g.yLabel, { text: "+y", ...corner.clone().add(yDisp.normalize().multiplyScalar(TEXT_SPACING)) })
 }
 
 function resizeRenderer () {
@@ -249,6 +283,7 @@ function disableOrbitIfMouseDownOnObject () {
 }
 
 var orbitControls = new THREE.OrbitControls(camera, renderer.domElement)
+
 var controls = new THREE.DragControls( clickableObjects, camera, renderer.domElement );
 controls.addEventListener( 'dragstart', dragStartCallback );
 controls.addEventListener( 'dragend', dragendCallback );
@@ -263,6 +298,26 @@ var startColor;
 
 const nullGeometry = new THREE.BufferGeometry()
 const nullMaterial = new THREE.MeshLambertMaterial()
+
+function drawToDOMCoords (v) {
+  let size = renderer.getSize(new THREE.Vector2())
+  v = new THREE.Vector2(v.x, v.y)
+
+  v.x = (v.x * size.x / 2) + size.x / 2
+  v.y = -(v.y * size.y / 2) + size.y / 2
+
+  return v
+}
+
+function domToDrawCoords (v) {
+  let size = renderer.getSize(new THREE.Vector2())
+  v = v.clone()
+
+  v.x = (v.x - size.x / 2) * 2 / size.x
+  v.y = (v.y - size.y / 2) * -2 / size.y
+
+  return v
+}
 
 class VisText extends THREE.Mesh {
   constructor(params={}) {
@@ -284,11 +339,7 @@ class VisText extends THREE.Mesh {
       v.project(camera)
 
       window.camera = camera
-
-      let size = renderer.getSize(new THREE.Vector2())
-
-      v.x = (v.x * size.x / 2) + size.x / 2
-      v.y = -(v.y * size.y / 2) + size.y / 2
+      v = drawToDOMCoords(v)
 
       // ASSUMES CANVAS IS ALIGNED TO TOP LEFT OF SCREEN
       let adjust = this.adjust
