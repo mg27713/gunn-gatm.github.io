@@ -16,8 +16,8 @@
     <div class="items" id="items"></div>
 
     <button id="giant-button">Snap</button>
-    <button class="smol-button" onclick="mainChain.reset()">Reset</button>
-    <button class="smol-button" onclick="mainChain.undo()">Undo</button>
+    <button class="smol-button" id="reset">Reset</button>
+    <button class="smol-button" id="undo">Undo</button>
     <h2>Advanced</h2>
     <div class="slider">
         <label for="boing-slider">Boing factor</label>
@@ -35,10 +35,10 @@
         <label for="do-boing">Show boing</label>
         <input type="checkbox" id="do-boing" checked />
     </div>
-    <button class="smol-button switch-theme" onclick="switchTheme()">Switch theme</button>
+    <button class="smol-button switch-theme" id="switch-theme">Switch theme</button>
 </div>
 
-<script src="snap.js"></script>
+<script src="snap.js" type="module"></script>
 
 </body>
 </html>
