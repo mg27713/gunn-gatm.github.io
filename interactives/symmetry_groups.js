@@ -2,18 +2,31 @@ import * as THREE_UNEXTENDED from 'https://cdn.jsdelivr.net/npm/three@0.128/buil
 import {OrbitControls, DragControls} from "./orbit_controls.js"
 import {deepEquals} from "./common.js"
 
+// Major props to https://github.com/learnthreejs/three-js-boilerplate for getting me started!
+
 const THREE = {... THREE_UNEXTENDED, OrbitControls, DragControls }
+
+// Units: SCALE is one grid spacing
+const SCALE = 50
 
 var scene = new THREE.Scene();
 scene.background = new THREE.Color( 0xf0f0f0 );
-var camera = new THREE.PerspectiveCamera( 70, 0, 700, 10000 );
-var objects = [];
+var camera = new THREE.PerspectiveCamera( 70, 0, 4, 10000 );
+var clickableObjects = [];
 
-const size = 100;
-const divisions = 10;
+const gridDivisions = 50;
+const gridSize = gridDivisions * SCALE;
 
-const gridHelper = new THREE.GridHelper( size, divisions );
-scene.add( gridHelper );
+let grid = new THREE.GridHelper( gridSize, gridDivisions );
+showGrid()
+
+function showGrid() {
+  scene.add(grid)
+}
+
+function hideGrid() {
+  scene.remove(grid)
+}
 
 let DOMList = {
   drawingSurface: "drawing-surface",
@@ -37,6 +50,9 @@ textSVG.classList.add("text-svg")
 new ResizeObserver(resizeRenderer).observe(DOM.drawingSurface)
 DOM.drawingSurface.appendChild( renderer.domElement );
 DOM.drawingSurface.appendChild(textSVG)
+
+// Text elements currently displayed (constantly rewritten when rendering)
+let displayedTextElems = []
 
 // Takes in something like { text: ..., x, y, classes: [], noShadow: false/true }
 function drawTextElements(elems) {
@@ -107,46 +123,117 @@ function disableOrbitIfMouseDownOnObject () {
   if (!isMouseDown) return
 
     raycaster.setFromCamera(mousePos, camera);
-    const intersects = raycaster.intersectObjects(objects);
+    const intersects = raycaster.intersectObjects(clickableObjects);
 
     orbitControls.enabled = (intersects.length === 0)
 }
 
 var orbitControls = new THREE.OrbitControls(camera, renderer.domElement)
-var controls = new THREE.DragControls( objects, camera, renderer.domElement );
+var controls = new THREE.DragControls( clickableObjects, camera, renderer.domElement );
 controls.addEventListener( 'dragstart', dragStartCallback );
 controls.addEventListener( 'dragend', dragendCallback );
 
-camera.position.z = 1000;
+function setDefaultCamera() {
+  camera.position.z = 300;
+  camera.position.x = 300;
+  camera.position.y = 300;
+}
 
+setDefaultCamera()
 var startColor;
+
+const nullGeometry = new THREE.BufferGeometry()
+const nullMaterial = new THREE.MeshLambertMaterial()
+
+class VisText extends THREE.Mesh {
+  constructor(params={}) {
+    super(nullGeometry, nullMaterial)
+
+    this.text = params.text
+
+    // Adjust text position, in pixels
+    this.adjust = new THREE.Vector2(0, 0)
+
+    this.onAfterRender = () => {
+      let v = new THREE.Vector3()
+
+      this.updateMatrixWorld()
+      v.setFromMatrixPosition(this.matrixWorld)
+      v.project(camera)
+
+      let size = renderer.getSize(new THREE.Vector2())
+
+      v.x *= size.x / 2
+      v.y *= size.y / 2
+
+      // ASSUMES CANVAS IS ALIGNED TO TOP LEFT OF SCREEN
+      let adjust = this.adjust
+
+      displayedTextElems.push({ text: this.text, x: v.x + adjust.x, y: v.y + adjust.y })
+    }
+  }
+}
+
+class VisObject extends THREE.Mesh {
+  constructor(params={}) {
+    super(params.geometry, params.material ?? new THREE.MeshLambertMaterial({color: 0xdfdfdf}))
+
+    this.position.set(params.position)
+    this.clickable = !!params.clickable
+
+    this.clickEventListeners = []
+  }
+
+  addClickEventListener (listener) {
+    if (!this.clickEventListeners.includes(listener))
+      this.clickEventListeners.push(listener)
+  }
+
+  removeClickEventListener (listener) {
+    this.clickEventListeners = this.clickEventListeners.filter(l => l !== listener)
+  }
+
+  triggerClickEvent (evt) {
+    this.clickEventListeners.forEach(l => l(evt, this))
+  }
+
+  // Whether we can interact
+  get clickable () {
+    return this._clickable
+  }
+
+  set clickable(v) {
+    if (typeof v !== "boolean") throw new TypeError("????? 西瓜瓤")
+    this._clickable = v
+
+    if (v && !clickableObjects.includes(this)) {
+      clickableObjects.push(this)
+    } else if (clickableObjects.includes(this)) {
+      clickableObjects = clickableObjects.filter(o => o !== this)
+    }
+  }
+}
 
 function init() {
   console.log("init")
-  scene.add( new THREE.AmbientLight( 0x0f0f0f ) );
+  scene.add( new THREE.AmbientLight( 0xbbbbbb ) );
 
   var light = new THREE.SpotLight( 0xffffff, 1.5 );
   light.position.set( 0, 500, 2000 );
 
   scene.add(light);
 
-  var geometry = new THREE.BoxGeometry( 40, 40, 40 );
-  var geometry = new THREE.SphereGeometry( 40, 40, 40 );
+  var geometry = new THREE.BoxGeometry( SCALE, SCALE, SCALE );
+  var object = new VisObject({ geometry, clickable: true })
 
-  for (var i = 0; i < 100; i++) {
-    var object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( { color: Math.random() * 0xffffff } ) );
+  let text = new VisText({ text: "cow" })
 
-    object.position.x = Math.random() * 1000 - 500;
-    object.position.y = Math.random() * 600 - 300;
-    object.position.z = Math.random() * 800 - 400;
+  object.position.x = Math.random() * 10 - 50;
+  object.position.y = Math.random() * 60 - 30;
+  object.position.z = Math.random() * 80 - 40;
 
-    object.castShadow = true;
-    object.receiveShadow = true;
-
-    scene.add( object );
-
-    objects.push( object );
-  }
+  scene.add( object );
+  scene.add(text)
 }
 
 function dragStartCallback(event) {
@@ -165,8 +252,11 @@ function animate() {
 
   disableOrbitIfMouseDownOnObject()
   orbitControls.update()
+
+  displayedTextElems = []
+
   renderer.render(scene, camera);
-  drawTextElements([{ text: "hello", x: 300, y: 300}])
+  drawTextElements(displayedTextElems)
 }
 
 init();
