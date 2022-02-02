@@ -13,8 +13,7 @@ let styles = {
   gridColor: { default: 0x888888, handler: v => grid.colorCenterLine = grid.colorGrid = new THREE.Color(v) },
   backgroundColor: { default: 0xf0f0f0, handler: v => scene.background = new THREE.Color(v) },
   selectedTriangleColor: { default: 0x3f3f3f, handler: setColor(() => selectedTriangleMaterial)},
-  allow2DRotation: { default: false, handler: allow2DRotation }, // if false, then you can basically just drag around in 2D
-  allow3DRotation: { default: false, handler: allow3DRotation }  // if this is true, then allow2DRotation is set to true
+  allow3DRotation: { default: false, handler: allow3DRotation }
 }
 
 // Note, if you change this you will have to change some other stuff
@@ -40,7 +39,7 @@ function setStyleDefaults () {
 styles = new Proxy(styles, {
   get: (target, prop, receiver) => {
     let style = target[prop]
-    console.log("hi")
+    console.log("Updating property " + prop)
 
     setTimeout(() => {
       // After they've set the value, call the handler
@@ -71,31 +70,27 @@ window.grid = grid
 let DOMList = {
   drawingSurface: "drawing-surface",
   groupSelectors: "group-selectors",
-  items: "items"
+  items: "items",
+  allow3DRotation: "allow-3d"
 }
 
-function allow2DRotation (v) {
-  if (typeof v !== "boolean") {
-    throw new Error("allow2DRotation must be a boolean") // thanks github copilot
-  }
-
-  if (!v) {
-    // We no longer use OrbitControls, look from the bottom down, and default to being able to translate
-    setDefaultCamera()
-
-  }
-}
+let useTranslationControls = true
 
 function allow3DRotation (v) {
   if (typeof v !== "boolean") {
-    throw new Error("allow3DRotation must be a boolean")
+    throw new Error("allow3DRotation must be a boolean") // thanks copilot
   }
+
+  DOM.allow3DRotation.checked = v
 
   if (!v) {
     setDefaultCamera()
-    orbitControls.maxPolarAngle = 0 // prevent any movement in that direction
+    useTranslationControls = true
+    orbitControls.enabled = false
   } else {
+    useTranslationControls = false
     orbitControls.maxPolarAngle = Math.PI / 2 - 0.1 // prevent from going under the grid
+    orbitControls.enabled = true
   }
 }
 
@@ -127,6 +122,10 @@ textSVG.innerHTML = `<defs>
 new ResizeObserver(resizeRenderer).observe(DOM.drawingSurface)
 DOM.drawingSurface.appendChild( renderer.domElement );
 DOM.drawingSurface.appendChild(textSVG)
+
+DOM.allow3DRotation.addEventListener("input", () => {
+  allow3DRotation(DOM.allow3DRotation.checked)
+})
 
 // Text elements currently displayed (constantly rewritten when rendering)
 let displayedTextElems = []
@@ -444,7 +443,7 @@ function init() {
 }
 
 function dragStartCallback(event) {
-  orbitControls.enabled = false // controls clash with each other
+  controlControls(false)
   if (event.object.selectedMaterial)
     event.object.material = event.object.selectedMaterial
 }
@@ -452,7 +451,15 @@ function dragStartCallback(event) {
 function dragendCallback(event) {
   if (event.object.selectedMaterial)
     event.object.material = event.object.unselectedMaterial
-  orbitControls.enabled = true
+  controlControls(true)
+}
+
+function controlControls (enabled) {
+  if (useTranslationControls) {
+
+  } else {
+    orbitControls.enabled = enabled
+  }
 }
 
 function animate() {
