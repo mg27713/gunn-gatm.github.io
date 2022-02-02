@@ -65,8 +65,6 @@ let workingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0))
 let grid = new THREE.GridHelper(gridSize, gridDivisions);
 scene.add(grid)
 
-window.grid = grid
-
 let DOMList = {
   drawingSurface: "drawing-surface",
   groupSelectors: "group-selectors",
@@ -155,7 +153,6 @@ function drawTextElements(elems) {
     let classes = ["text-label"].concat([ e.classes ]).flat().filter(s => !!s)
 
     // Update classes
-    window.de = deepEquals
     if (!deepEquals(Array.from(dom.classList).sort(), classes.sort())) {
       dom.setAttributeNS(null, "class", "")
       for (let c of classes) if (c) dom.classList.add(c)
@@ -287,12 +284,19 @@ var controls = new THREE.DragControls( clickableObjects, camera, renderer.domEle
 controls.addEventListener( 'dragstart', dragStartCallback );
 controls.addEventListener( 'dragend', dragendCallback );
 
+let 西瓜 = false
+
 function setDefaultCamera() {
   camera.position.copy(DEFAULT_CAMERA_POSITION)
   camera.lookAt(0, 0, 0)
+  西瓜 ? orbitControls.saveState() : orbitControls.reset()
+  orbitControls.saveState()
+
+  西瓜 = true
 }
 
 setDefaultCamera()
+
 var startColor;
 
 const nullGeometry = new THREE.BufferGeometry()
