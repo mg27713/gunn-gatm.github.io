@@ -47,6 +47,10 @@ export function getVersionID () {
   return ++version
 }
 
+function isTypedArray (arr) {
+  return ArrayBuffer.isView(arr) && !(arr instanceof DataView)
+}
+
 // Simple deep equals. Uses Object.is-type equality, though. Doesn't handle circularity or any of the fancy new containers
 /**
  *
@@ -117,6 +121,10 @@ const proxyHandlers = {
     target.set(propName, value)
   }
 }
+
+/**
+ * NOTE: Inheritance is not used, but I'm too lazy to remove it
+ */
 
 /**
  * The properties class stores an element's internal properties, in contrast to the user-facing properties, which are
@@ -740,6 +748,12 @@ export class VisComponent {
     // Whether this component needs redrawing
     this.needsUpdate = true
 
+    /**
+     * Meant for extra needsUpdate handling. Unused in snaps.js but wiill be used in symmetry_groups.js
+     * @type {Props}
+     */
+    this.props = new Props()
+
     this.init()
     this.setDOMID()
   }
@@ -766,10 +780,12 @@ export class VisComponent {
   }
 
   update() {
-    if (this.needsUpdate) {
+    if (this.needsUpdate = this.needsUpdate || this.props.hasChangedProperties) {
       if (!this._update()) // returning a truthy value from _update means the update isn't complete for some reason
         this.needsUpdate = false
     }
+
+    this.props.markGlobalUpdateComplete() // SELF ALERT
   }
 
   _update() {
@@ -864,5 +880,20 @@ export class SnapVisualization extends VisGroup {
         this.domElement.removeChild(node)
       }
     }
+  }
+}
+
+class TemplateElement extends VisComponent {
+  constructor() {
+    super()
+  }
+
+  init() {
+    this.domElement = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+    this.addClass("bleh")
+  }
+
+  _update () {
+
   }
 }

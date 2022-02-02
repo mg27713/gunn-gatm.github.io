@@ -923,7 +923,6 @@ document.getElementById("reset").addEventListener("click", () => mainChain.reset
 document.getElementById("undo").addEventListener("click", () => mainChain.undo())
 
 function switchTheme() {
-    console.log("hi")
     if (document.body.classList.contains('dark'))
         document.body.classList.remove('dark');
     else document.body.classList.add('dark');
