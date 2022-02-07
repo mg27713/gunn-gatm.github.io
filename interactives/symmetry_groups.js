@@ -415,6 +415,15 @@ function generateRegularPolygon(n=3, circumradius=SCALE, thickness = paperThickn
 let paperTriangle = generateRegularPolygon(3)
 window.g = paperTriangle
 
+// We represent a movement as a permutation of vertices. Not all permutations of vertices are valid for certain shapes!
+// But it is a nice generic form
+
+class Motion {
+  constructor (vertexCount, vertices) {
+    this.originalVertices = []
+  }
+}
+
 class TriangleObject extends VisObject {
   constructor (params={}) {
     super({ geometry: paperTriangle.g, clickable: true, material: triangleMaterial })
@@ -430,6 +439,27 @@ class TriangleObject extends VisObject {
 
     this.unselectedMaterial = triangleMaterial
     this.selectedMaterial = selectedTriangleMaterial
+
+    this.inMotion = false
+    this.currentMotion =
+
+    this.onAfterRender = () => {
+      if (this.inMotion) {
+
+      }
+    }
+  }
+}
+
+class ReflectivePlaneObject extends VisObject {
+  constructor (params={}) {
+    super()
+  }
+}
+
+class AxisObject extends VisObject {
+  constructor (params={}) {
+    super()
   }
 }
 
