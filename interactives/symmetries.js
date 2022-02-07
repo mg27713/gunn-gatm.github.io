@@ -1,4 +1,4 @@
-import { Vector2, Vector3, Mat4 } from 'https://cdn.jsdelivr.net/npm/three@0.128/build/three.module.js';
+import { Vector2, Vector3, Matrix4, Matrix3 } from "../external/three.module.js"
 
 // Helper stuffs for symmetries, etc.
 
@@ -52,6 +52,19 @@ function isIsometry (shape, motion) {
 // Returns a Mat4 from a valid isometry
 function matrixFromIsometry (shape, motion) {
   if (!isIsometry(shape, motion)) return null
+
+  // [ a b c ] [ v1x v2x v3x ]   [ w1x w2x w3x ]
+  // | d e f ] [ v1y v2y v3y ] = [ w1y w2y w3y ]
+  // [ g h i ] [ v1z v2z v3z ]   [ w1z w2z w2z ]
+  //     T           V                  W
+
+  // T = WV^-1
+
+  // get first three vertex pairs
+  let [ v1, v2, v3 ] = shape.vertices
+  let [ w1, w2, w3 ] = shape.vertices.map((_, i) => shape.vertices[motion.permutation[i]])
+
+  let m = new Matrix3()
 }
 
 class Motion {
