@@ -1,4 +1,5 @@
-import { Vector2, Vector3, Matrix4, Matrix3 } from "../external/three.module.js"
+import {Vector2, Vector3, Matrix4, Matrix3, Quaternion} from "../external/three.module.js"
+import {deepEquals} from "./common.js"
 
 // Helper stuffs for symmetries, etc.
 
@@ -9,25 +10,41 @@ import { Vector2, Vector3, Matrix4, Matrix3 } from "../external/three.module.js"
 // each pair of vertices is preserved.
 
 // Assumed to be convex
-class SymmetricShape {
+export class SymmetricShape {
   constructor (params={}) {
     this.name = params.name
     this.dimensions = params.dimensions // should be 2 or 3
     this.vertices = params.vertices // vertices centered around (0, 0, 0)
 
+    this.axes = []
+    this.axisNames = [] // axes in which this shape is symmetrical in
+    this.reflectiveNormals = [] // normals of reflective planes this shape is symmetrical in
+    this.rNormNames = []
+
     this.normalizeVertexDimensions()
+
+    let generators = params.generators?.map(g => Array.isArray(g) ? new Motion(g) : motionFromMatrix(this, g)) ?? []
+    generators.map((g, i) => { if (!g) throw new Error(`Generator at index ${i} is fucked up`)})
+
+    let group = this.fullSymmetryGroup = computeSymmetryGroup(this, generators)
+    this.axes = group.getAxes()
+    this.reflectiveNormals = null//group.getReflectiveNormals()
   }
 
   normalizeVertexDimensions() {
     let v = this.vertices
 
     if (v[0] instanceof Vector2) {
-      this.vertices = this.vertices.map(v => new Vector3(v.x, 0, v.z))
+      this.vertices = this.vertices.map(v => new Vector3(v.x, 0, v.y))
     }
   }
 }
 
-function closeEnough (d1, d2) {
+export function closeEnough (d1, d2) {
+  if (Math.abs(d2) < 1e-6) {
+    return Math.abs(d1 - d2) < 1e-6 // lol
+  }
+
   return Math.abs(d1 / d2 - 1) < 1e-6
 }
 
@@ -50,7 +67,7 @@ function isIsometry (shape, motion) {
 }
 
 // Returns a Mat4 from a valid isometry
-function matrixFromIsometry (shape, motion) {
+export function matrixFromIsometry (shape, motion) {
   if (!isIsometry(shape, motion)) return null
 
   // [ a b c ] [ v1x v2x v3x ]   [ w1x w2x w3x ]
@@ -64,23 +81,212 @@ function matrixFromIsometry (shape, motion) {
   let [ v1, v2, v3 ] = shape.vertices
   let [ w1, w2, w3 ] = shape.vertices.map((_, i) => shape.vertices[motion.permutation[i]])
 
-  let m = new Matrix3()
+  let V = new Matrix3()
+  V.set(v1.x, v2.x, v3.x, v1.y, v2.y, v3.y, v1.z, v2.z, v3.z)
+  let W = new Matrix3()
+  W.set(w1.x, w2.x, w3.x, w1.y, w2.y, w3.y, w1.z, w2.z, w3.z)
+
+  let M = W.multiply(V.invert())
+  return new Matrix4().setFromMatrix3(M)
 }
 
-class Motion {
-  constructor () {
-    this.permutation = [] // [0, 1 ... n] is identity
+/**
+ *
+ * @param shape
+ * @param matrix {Matrix4}
+ */
+export function motionFromMatrix (shape, matrix) {
+  // Assumes the matrix is valid
+
+  let v = shape.vertices
+  let vtr = v.map(v => v.clone().applyMatrix4(matrix))
+
+  // get indices in v of each element in vtr
+  let perm = vtr.map(newv => v.findIndex(v => v.distanceTo(newv) < 1e-6))
+  if (perm.indexOf(-1) !== -1) // lol
+    return null
+
+  return new Motion(perm)
+}
+
+export function explainMatrix (mat4) {
+  // A 3d transformation matrix can be decomposed into one of the following:
+  // identity
+  // reflection across some plane
+  // rotation by some angle theta around some axis
+  // reflection followed by rotation (rotoreflection)
+  // We're preserving the origin, which is nice
+
+  /**
+   * Is identity
+   * @param m {Matrix4}
+   */
+  function detectIdentity (m) {
+    let a = new Matrix4().toArray()
+    let b = m.toArray()
+
+    return a.map((v, i) => Math.abs(v - b[i])).reduce((a, b) => a + b) < 1e-6
+  }
+
+  function detectReflection (m) {
+
+  }
+
+  if (detectIdentity(mat4)) return [ { type: "identity", m: mat4 } ]
+
+  let q = new Quaternion()
+  let s = new Vector3()
+
+  mat4.decompose(new Vector3() /* should always be 0,0,0 */, q, s)
+
+  let k = Math.sqrt(1 - q.w * q.w)
+  if (k < 1e-6) k = 1
+
+  let axis = new Vector3(q.x / k, q.y / k, q.z / k)
+  let theta = 2 * Math.acos(q.w)
+
+  if (closeEnough(theta, 2 * Math.PI) || closeEnough(theta, 2 * Math.PI)) theta = 0
+  if (closeEnough(s.x, 1) && closeEnough(s.y, 1) && closeEnough(s.z, 1)) {
+    // Pure rotation, def not reflection
+    return [ { type: "rotation", axis, theta, m: mat4 } ]
+  }
+
+  // If it's a reflection with unit normal <a, b, c>... see
+  // https://en.wikipedia.org/wiki/Transformation_matrix#Examples_in_3D_computer_graphics
+
+  let r = mat4.toArray()
+  let a = (1 - r[0]) / 2
+  if (closeEnough(a, 0)) a = 0
+  let b = (1 - r[5]) / 2
+  if (closeEnough(b, 0)) b = 0
+  let c = (1 - r[10]) / 2
+  if (closeEnough(c, 0)) c = 0
+
+  a = Math.sqrt(a)
+  b = Math.sqrt(b)
+  c = Math.sqrt(c)
+
+  if (![a,b,c].every(Number.isFinite)) throw new Error("what the fuck")
+
+  // We now confirm that it is a genuine reflection matrix...
+
+  let expect = [ 1-2*a*a, -2*a*b, -2*a*c, NaN, -2*a*b, 1-2*b*b, -2*b*c, NaN, -2*a*c, -2*b*c, 1-2*c*c ]
+  if (expect.every((s, i) => !Number.isFinite(s) || closeEnough(s, r[i]))) {
+    // Pure reflection about normal <a, b, c>
+    return [ { type: "reflection", normal: new Vector3(a, b, c), m: mat4 }]
+  }
+
+  // It's a fucking rotoreflection
+  return [ { type: "rotation", axis, theta, m: new Matrix4().makeRotationFromQuaternion(q) },
+    { type: "reflection", normal: s, m: new Matrix4().makeScale(s.x, s.y, s.z) }]
+}
+
+export function radiansToReadable (r) {
+  return Math.round(r * 180 / Math.PI) + '°'
+}
+
+export function isMatrixReflection (mat4) {
+
+}
+
+export class Motion {
+  constructor (perm, shape) {
+    if (typeof perm === "number") perm = [...new Array(perm).keys()]
+
+    this.permutation = perm // [0, 1 ... n] is identity
   }
 
   eq (m) {
     return this.permutation.every((p, i) => m.permutation[i] === p)
   }
+
+  compose (m) {
+    let p = this.permutation
+    let mp = m.permutation
+
+    if (p.length !== mp.length) throw new Error("οκεανος")
+    return new Motion( p.map(i => mp[i]))
+  }
+
+  isIdentity () {
+    return this.permutation.every((i, j) => i === j)
+  }
+
+  toMatrix (shape) {
+    return matrixFromIsometry(shape, this)
+  }
 }
 
-class SymmetryGroup {
+// We compute the full symmetry group of a 3-dimensional shape. One way to do this would be to iterate through all
+// permutations (n!), but that is slow. Instead, we use some list of motions as generators and apply them repeatedly
+function computeSymmetryGroup(shape, generators=[]) {
+  let vCount = shape.vertices.length
+  let identity = new Motion(vCount)
+
+  let elems = [ identity, ...generators ]
+  let prevLen
+
+  do {
+    prevLen = elems.length
+    if (prevLen > 100) throw new Error("FJIWF:OLIWEJF:OWIJEF")
+
+    for (let i = 0; i < prevLen; ++i) {
+      let m1 = elems[i]
+      for (let j = 0; j < prevLen; ++j) {
+        let m2 = elems[j]
+
+        // Compose two motions to get a potentially new motion
+        let newM = m1.compose(m2)
+
+        if (!elems.some(e => e.eq(newM)))
+          elems.push(newM)
+      }
+    }
+  } while (elems.length !== prevLen)
+
+  // At this point, we should have all possible generated permutations
+  return new SymmetryGroup({ shape, elems })
+}
+
+function closelyEquilinear (v1, v2) {
+  let r = 0
+  if (Math.abs(v2.x) < 1e-6) {
+    if (Math.abs(v2.y) < 1e-6) {
+      if (Math.abs(v2.z) < 1e-6) {
+        throw new Error("FOPIWEJFPOIWEJFPOWIJEFPOWIJEFPO")
+      } else {
+        r = v1.z / v2.z
+      }
+    } else {
+      r = v1.y / v2.y
+    }
+  } else {
+    r = v1.x / v2.x
+  }
+
+  let av1x = v2.x * r
+  let av2x = v2.y * r
+  let av3x = v2.z * r
+
+  return (closeEnough(av1x, v1.x) && closeEnough(av2x, v1.y) && closeEnough(av3x, v1.z))
+}
+
+export class SymmetryGroup {
   constructor (params={}) {
     this.shape = params.shape
-    this.elements = [] // array of motions
+    this.elements = params.elems // array of motions
+  }
+
+  getAxes () {
+    // Iterate through each element; test whether it's a rotation, record the axis if it is
+
+    let axes = []
+
+    // remove axes if they are equilinear to another axis
+
+    let filteredAxes = axes.filter((a, i) => axes.every((a2, _i) => _i === i || closelyEquilinear(a, a2)))
+
+    return filteredAxes
   }
 }
 
@@ -88,15 +294,16 @@ class SymmetryGroup {
  * The vertices of a (2-dimensional) regular polygon, with the first vertex at (1, 0)
  * @param n {number} Vertex count
  * @param circumradius {number}
+ * @param rot {number} Extra rotation ccw to apply
  * @returns {Vector2[]}
  */
-function generateRegularPolygon (n=3, circumradius=1) {
+export function generateRegularPolygon (n=3, circumradius=1, rot=0) {
   let points = []
 
   for (let i = 0; i < n; ++i) {
-    let x = Math.cos(i / n * 2 * Math.PI) * circumradius
-    let z = Math.sin(i / n * 2 * Math.PI) * circumradius
-    points.push(Vector2(x, z))
+    let x = Math.cos(i / n * 2 * Math.PI + rot) * circumradius
+    let z = Math.sin(i / n * 2 * Math.PI + rot) * circumradius
+    points.push(new Vector2(x, z))
   }
 
   return points
@@ -109,9 +316,46 @@ function generateRegularPolygon (n=3, circumradius=1) {
  * @param thickness {number}
  * @returns {Vector3[]}
  */
-function fattenPolygon (vertices, thickness=0.5) {
+export function fattenPolygon (vertices, thickness=0.5) {
   thickness /= 2
   return vertices.flatMap(v => [ new Vector3(v.x, -thickness, v.y), new Vector3(v.x, thickness, v.y) ])
 }
 
-const equilateralTriangle = new SymmetricShape({ name: "equilateral triangle", dimensions: 2, vertices: generateRegularPolygon() })
+function generateSkinnyPolygon(n) {
+  return fattenPolygon(generateRegularPolygon(n), 0.1)
+}
+
+export const SHAPES = {
+  triangle: new SymmetricShape({
+    name: "equilateral triangle",
+    dimensions: 2,
+    vertices: generateSkinnyPolygon(3),
+    rNormNames: [ 'A', 'B', 'C' ],
+    generators: [
+      new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
+      new Matrix4().makeScale(1, 1, -1) // single reflection to make it a dihedral group
+    ]
+  }),
+  triangularPrism: new SymmetricShape({
+    name: "equilateral triangular prism",
+    dimensions: 3,
+    vertices: fattenPolygon(generateRegularPolygon(3), 1),
+    rNormNames: [ 'A', 'B', 'C', 'P' ],
+    generators: [
+      new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
+      new Matrix4().makeScale(1, 1, -1), // dihedral
+      new Matrix4().makeScale(1, -1, 1) // prism GANG 银行
+    ]
+  }),
+  cube: new SymmetricShape({
+    name: "cube",
+    dimensions: 3,
+    vertices: fattenPolygon(generateRegularPolygon(4, Math.sqrt(2) / 2, Math.PI / 4), 1), // close enough
+    generators: [
+      new Matrix4().makeRotationX(Math.PI / 2), // three rotations
+      new Matrix4().makeRotationY(Math.PI / 2),
+      new Matrix4().makeRotationZ(Math.PI / 2),
+      new Matrix4().makeScale(1, -1, 1) // reflection
+    ]
+  })
+}

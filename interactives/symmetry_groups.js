@@ -1,4 +1,4 @@
-import * as THREE_UNEXTENDED from 'https://cdn.jsdelivr.net/npm/three@0.128/build/three.module.js';
+import * as THREE_UNEXTENDED from '../external/three.module.js';
 import {OrbitControls, DragControls, ConvexGeometry} from "./orbit_controls.js"
 import {deepEquals} from "./common.js"
 
@@ -495,6 +495,9 @@ function controlControls (enabled) {
     orbitControls.enabled = enabled
   }
 }
+
+import * as S from "./symmetries.js"
+Object.assign(window, S)
 
 function animate() {
   requestAnimationFrame( animate );

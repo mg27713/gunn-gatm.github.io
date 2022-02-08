@@ -7,24 +7,15 @@ import {
   Spherical,
   TOUCH,
   Vector2,
-  Vector3
-} from "https://cdn.jsdelivr.net/npm/three@0.128/build/three.module.js";
-
-import {
+  Vector3,
   Matrix4,
   Plane,
   Raycaster,
-} from 'https://cdn.jsdelivr.net/npm/three@0.128/build/three.module.js';
-
-import {
   BufferGeometry,
-  Float32BufferAttribute
-} from 'https://cdn.jsdelivr.net/npm/three@0.128/build/three.module.js';
-
-import {
+  Float32BufferAttribute,
   Line3,
-  Triangle,
-} from 'https://cdn.jsdelivr.net/npm/three@0.128/build/three.module.js';
+  Triangle
+} from "../external/three.module.js";
 
 /**
  * Ported from: https://github.com/maurizzzio/quickhull3d/ by Mauricio Poppe (https://github.com/maurizzzio)
