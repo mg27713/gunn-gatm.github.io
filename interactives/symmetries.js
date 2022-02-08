@@ -356,7 +356,9 @@ function generateSkinnyPolygon(n) {
 let cs = x => x >= 0 ? 1 : -1
 
 function getCylinderBasis (n, girth) {
-  let p = new Vector3(n.z * cs(n.x), n.z * cs(n.y), -(Math.abs(n.x) + Math.abs(n.y)) * cs(n.z)).normalize().multiplyScalar(girth)
+  let p = new Vector3(Math.abs(n.z) * cs(n.x),
+    Math.abs(n.z) * cs(n.y),
+    -(Math.abs(n.x) + Math.abs(n.y)) * cs(n.z)).normalize().multiplyScalar(girth)
   let q = new Vector3().crossVectors(n, p).normalize().multiplyScalar(girth)
 
   return [ p, q ]

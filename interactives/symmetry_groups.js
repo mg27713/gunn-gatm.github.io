@@ -462,7 +462,6 @@ class AxisObject extends VisObject {
     this.subtendsShift = 0.1
 
     this.computeChildren()
-    window.axis = this
   }
 
   computeChildren () {
@@ -572,7 +571,6 @@ function init() {
   miniatureScene.add(new AmbientLight( 0xeeeeee ) );
 
   miniatureScene.add(new SymmetricalObject({ shape: SHAPES.cube }))
-  miniatureScene.add(new AxisObject({ normal: new Vector3(1, 1, 1) }))
 }
 
 function dragStartCallback(event) {
