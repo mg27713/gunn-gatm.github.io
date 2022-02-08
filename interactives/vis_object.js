@@ -46,19 +46,25 @@ class VisObject extends Mesh {
 
   setDomain (d) {
     this.domain = d
-    this.children.forEach(c => c?.setDomain(d))
+    this.children.forEach(c => c.setDomain?.(d))
 
     this.clickable = !!d && this.clickable
   }
 
-  add (o) {
-    super.add(o)
-    o?.setDomain(this.domain)
+  add (...args) {
+    super.add(...args)
+    args.forEach(a => a.setDomain?.(this.domain))
   }
 
-  remove () {
-    super.remove()
-    this?.setDomain(null)
+  remove (...args) {
+    super.remove(...args)
+    this.setDomain(null)
+  }
+
+  dispose () {
+    super.dispose()
+    this.clickable = false
+    this.setDomain(null)
   }
 }
 

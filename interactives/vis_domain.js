@@ -15,7 +15,7 @@ import {clearTextElements, drawTextElements} from "./text_elem.js"
 class VisScene extends Scene {
   setDomain (d) {
     this.domain = d
-    this.children.forEach(c => c?.setDomain(d))
+    this.children.forEach(c => c.setDomain?.(d))
 
     this.clickable = !!d && this.clickable
   }
@@ -26,8 +26,8 @@ class VisScene extends Scene {
     o.setDomain?.(this.domain)
   }
 
-  remove () {
-    super.remove()
+  remove (...args) {
+    super.remove(...args)
     this.setDomain(null)
   }
 }

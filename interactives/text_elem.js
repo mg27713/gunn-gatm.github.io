@@ -1,11 +1,9 @@
 import {BufferGeometry, Mesh, MeshLambertMaterial, Vector2, Vector3} from "../external/three.module.js"
 import {deepEquals} from "./common.js"
 import {VisObject} from "./vis_object.js"
+import { nullGeometry, nullMaterial } from "./null.js"
 
 let displayedTextElems = [] // used as an intermediate step
-
-const nullGeometry = new BufferGeometry()
-const nullMaterial = new MeshLambertMaterial()
 
 class VisText extends VisObject {
   constructor(params={}) {

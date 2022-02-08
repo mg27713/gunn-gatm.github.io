@@ -1,5 +1,9 @@
-import {Vector3} from "../external/three.module.js"
+import {MeshPhongMaterial, Vector3} from "../external/three.module.js"
 import {generateArrow} from "./symmetries.js"
+import {VisObject} from "./vis_object.js"
+import { nullGeometry} from "./null.js"
+
+const axisMaterial = new MeshPhongMaterial({ color: 0xff00dd })
 
 class AxisObject extends VisObject {
   constructor (params={}) {

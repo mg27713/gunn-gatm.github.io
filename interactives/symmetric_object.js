@@ -1,11 +1,13 @@
 import * as THREE from "../external/three.module.js"
 import {Color, Float32BufferAttribute, MeshLambertMaterial} from "../external/three.module.js"
 import {AxisObject} from "./axis_object.js"
+import {VisObject} from "./vis_object.js"
+import {ReflectivePlaneObject} from "./reflective_plane_object.js"
 
 const generalMaterial = new THREE.MeshBasicMaterial ({ vertexColors: true })
 const triangleMaterial = new MeshLambertMaterial()
 
-class SymmetricalObject extends VisObject {
+export class SymmetricObject extends VisObject {
   constructor (params={}) {
     let shape = params.shape
     if (!shape) throw new Error("fuck you")
@@ -41,8 +43,6 @@ class SymmetricalObject extends VisObject {
 
     this.axisObjects = []
     this.planeObjects = []
-
-    this.showAxisObjects(true)
   }
 
   showAxisObjects (show=true) {
@@ -50,6 +50,8 @@ class SymmetricalObject extends VisObject {
       this.remove(a)
       a.geometry.dispose()
     })
+
+    this.axisObjects = []
 
     if (show) {
       let o = this.axisObjects = []
@@ -61,6 +63,25 @@ class SymmetricalObject extends VisObject {
       }
 
       this.axisObjects.forEach(o => this.add(o))
+    }
+  }
+
+  showPlaneObjects (show=true) {
+    this.planeObjects.forEach(a => {
+      this.remove(a)
+      a.geometry.dispose()
+    })
+
+    if (show) {
+      let o = this.planeObjects = []
+
+      for (let n of this.shape.reflectiveNormals) {
+        o.push(new ReflectivePlaneObject({
+          normal: n
+        }))
+      }
+
+      this.planeObjects.forEach(o => this.add(o))
     }
   }
 }

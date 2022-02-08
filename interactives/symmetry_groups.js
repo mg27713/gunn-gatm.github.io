@@ -3,6 +3,9 @@ import {Color, GridHelper, Vector3} from "../external/three.module.js"
 
 import * as THREE from "../external/three.module.js"
 import {VisText} from "./text_elem.js"
+import {SymmetricObject} from "./symmetric_object.js"
+import { SHAPES } from "./symmetries.js"
+
 Object.assign(window, { THREE })
 
 // Styling info for y'all
@@ -10,7 +13,7 @@ Object.assign(window, { THREE })
 let styles = {
   //triangleColor: { default: 0x8f8f1f, handler: setColor(() => triangleMaterial) },
   gridColor: { default: 0x888888, handler: v => mainGrid.colorCenterLine = mainGrid.colorGrid = new Color(v) },
-  backgroundColor: { default: 0xf0f0f0, handler: v => mainDomain.setBG(v) },
+  backgroundColor: { default: 0xf0f0f0, handler: v => (mainDomain.setBG(v), miniatureDomain.setBG(v)) },
   //selectedTriangleColor: { default: 0x3f3f3f, handler: setColor(() => selectedTriangleMaterial)},
   allow3DRotation: { default: false, handler: v => (mainDomain.allow3DRotation(v), DOM.allow3DRotation.checked = v) }
 }
@@ -62,12 +65,20 @@ mainDomain.scene.add(mainGrid)
 let text = new VisText({ text: "300", position: new Vector3(0.5, 0, 0) })
 mainDomain.scene.add(text)
 
+const miniatureDomain = new VisDomain( { defaultCameraPosition: new Vector3(1, 1.1, 1) })
+miniatureDomain.attachToElement(DOM.miniature)
+miniatureDomain.setDefaultCamera()
+
 function render () {
     mainDomain.tick()
+  miniatureDomain.tick()
   requestAnimationFrame(render)
 }
+
+let symObject = new SymmetricObject({ shape: SHAPES.cube })
+miniatureDomain.scene.add(symObject)
 
 setStyleDefaults()
 render()
 
-Object.assign(window, { mainDomain })
+Object.assign(window, { mainDomain, miniatureDomain, symObject })

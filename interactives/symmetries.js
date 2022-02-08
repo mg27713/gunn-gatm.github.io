@@ -354,10 +354,28 @@ function generateSkinnyPolygon(n) {
 
 let cs = x => x >= 0 ? 1 : -1
 
-function getCylinderBasis (n, girth) {
-  let p = new Vector3(Math.abs(n.z) * cs(n.x),
-    Math.abs(n.z) * cs(n.y),
-    -(Math.abs(n.x) + Math.abs(n.y)) * cs(n.z)).normalize().multiplyScalar(girth)
+export function getCylinderBasis (n, girth, preferAxisAligned=false) {
+  let p
+  n = n.clone().normalize()
+
+  if (preferAxisAligned) {
+    // Try to get a vector where one of the components is 0... y, then x, then z
+    let p1 = new Vector3(n.z, 0, -n.x)
+    let p2 = new Vector3(0, n.z, -n.y)
+    let p3 = new Vector3(-n.y, n.x, 0)
+
+    let ps = [ p1, p2, p3 ]
+    p = ps.reduce((v1, v2) => v1.lengthSq() < v2.lengthSq() ? v2 : v1)
+
+    if (p.lengthSq() < 1e-6) preferAxisAligned = false
+    p.normalize().multiplyScalar(girth)
+  }
+
+  if (!preferAxisAligned)
+    p = new Vector3(Math.abs(n.z) * cs(n.x),
+      Math.abs(n.z) * cs(n.y),
+      -(Math.abs(n.x) + Math.abs(n.y)) * cs(n.z)).normalize().multiplyScalar(girth)
+
   let q = new Vector3().crossVectors(n, p).normalize().multiplyScalar(girth)
 
   return [ p, q ]
@@ -482,7 +500,7 @@ export const SHAPES = {
     geometry: new BoxBufferGeometry(1, 1, 1),
     // Face colors/attributes, vertex labels
     faceColors: [
-      0xffffff, 0xffffff, 0xffffff, 0xffffff,
+      0xffffff, 0xffffff, 0xffffff, 0xffffff, // Rubik's cube
       0xffff00, 0xffff00, 0xffff00, 0xffff00,
       0xff8800, 0xff8800, 0xff8800, 0xff8800,
       0xff0000, 0xff0000, 0xff0000, 0xff0000,
