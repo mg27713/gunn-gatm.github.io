@@ -14,7 +14,7 @@ import {
   Color,
   AmbientLight,
   SpotLight,
-  CylinderGeometry
+  CylinderGeometry, BufferAttribute, Float32BufferAttribute, VertexColors, DoubleSide, MeshBasicMaterial
 } from '../external/three.module.js'
 import {OrbitControls, DragControls, ConvexGeometry} from "./orbit_controls.js"
 import {deepEquals} from "./common.js"
@@ -26,7 +26,7 @@ import {deepEquals} from "./common.js"
 let styles = {
   triangleColor: { default: 0x8f8f1f, handler: setColor(() => triangleMaterial) },
   gridColor: { default: 0x888888, handler: v => grid.colorCenterLine = grid.colorGrid = new Color(v) },
-  backgroundColor: { default: 0xf0f0f0, handler: v => scene.background = new Color(v) },
+  backgroundColor: { default: 0xf0f0f0, handler: v => miniatureScene.background = scene.background = new Color(v) },
   selectedTriangleColor: { default: 0x3f3f3f, handler: setColor(() => selectedTriangleMaterial)},
   allow3DRotation: { default: false, handler: allow3DRotation }
 }
@@ -35,8 +35,9 @@ let styles = {
 const SIZE = 15
 const gridDivisions = 15;
 const DEFAULT_CAMERA_POSITION = new Vector3(0, SIZE / 2, 0) // points toward (0, 0, 0)
+const DEFAULT_MINIATURE_CAMERA_POSITION = new Vector3(1.2, 1.2, 1)
 
-const paperThickness = 6;
+const paperThickness = 0.01;
 
 const SCALE = SIZE / gridDivisions
 const gridSize = SIZE
@@ -71,7 +72,7 @@ let triangleMaterial = new MeshLambertMaterial()
 let selectedTriangleMaterial = new MeshLambertMaterial()
 
 var scene = new Scene();
-var camera = new PerspectiveCamera( 70, 0, 0.01, 1000 );
+var camera = new PerspectiveCamera( 70, 0, 0.0001, 1000 );
 var clickableObjects = [];
 
 // Plane of the grid
@@ -84,7 +85,8 @@ let DOMList = {
   drawingSurface: "drawing-surface",
   groupSelectors: "group-selectors",
   items: "items",
-  allow3DRotation: "allow-3d"
+  allow3DRotation: "allow-3d",
+  miniature: "miniature"
 }
 
 let useTranslationControls = true
@@ -263,16 +265,27 @@ function drawSVGOrientator () {
   setElemProps(g.yLabel, { text: "+y", ...corner.clone().add(yDisp.normalize().multiplyScalar(TEXT_SPACING)) })
 }
 
+const MINIATURE_HEIGHT = 350
+
 function resizeRenderer () {
   let s = DOM.drawingSurface.getBoundingClientRect()
-  window.DOM = DOM
 
   renderer.setSize(s.width, s.height);
   camera.aspect = s.width / s.height
   camera.updateProjectionMatrix()
 
+  renderer.setPixelRatio(window.devicePixelRatio)
+  miniatureRenderer.setPixelRatio(window.devicePixelRatio)
+
   textSVG.setAttribute("width", s.width)
   textSVG.setAttribute("height", s.height)
+
+  let m = DOM.items.getBoundingClientRect()
+  let mrw, mrh
+
+  miniatureRenderer.setSize(mrw = m.width - 50, mrh = MINIATURE_HEIGHT)
+  miniatureCamera.aspect = mrw / mrh
+  miniatureCamera.updateProjectionMatrix()
 }
 
 const raycaster = new Raycaster();
@@ -310,6 +323,17 @@ function setDefaultCamera() {
   orbitControls.saveState()
 
   西瓜 = true
+}
+
+let 西瓜2 = false
+
+function setDefaultMiniatureCamera() {
+  miniatureCamera.position.copy(DEFAULT_MINIATURE_CAMERA_POSITION)
+  miniatureCamera.lookAt(0, 0, 0)
+  西瓜 ? orbitControls.saveState() : orbitControls.reset()
+  orbitControls.saveState()
+
+  西瓜2 = true
 }
 
 setDefaultCamera()
@@ -378,8 +402,8 @@ class VisObject extends Mesh {
   constructor(params={}) {
     super(params.geometry, params.material ?? new MeshLambertMaterial({color: 0xdfdfdf}))
 
-    this.position.set(params.position)
     this.clickable = !!params.clickable
+    this.position.set(0,0,0)
 
     this.visEventListeners = {}
   }
@@ -414,24 +438,6 @@ class VisObject extends Mesh {
   }
 }
 
-// Centered on (0,0,0), vertex pointing in the x direction, positive thickness
-function generateRegularPolygon(n=3, circumradius=SCALE, thickness = paperThickness) {
-  let points = []
-  let midriff = []
-
-  for (let i = 0; i < n; ++i) {
-    let x = Math.cos(i / n * 2 * Math.PI) * circumradius
-    let z = Math.sin(i / n * 2 * Math.PI) * circumradius
-    points.push(new Vector3(x, thickness / 2, z))
-    points.push(new Vector3(x, -thickness / 2, z))
-    midriff.push(new Vector3(x, 0, z))
-  }
-  return { g: new ConvexGeometry(points), midriff }
-}
-
-let paperTriangle = generateArrow([ new Vector3(0,0,0), new Vector3(1,1,1) ])
-window.g = paperTriangle
-
 // We represent a movement as a permutation of vertices. Not all permutations of vertices are valid for certain shapes!
 // But it is a nice generic form
 
@@ -441,30 +447,107 @@ class Motion {
   }
 }
 
-class TriangleObject extends VisObject {
+let axisMaterial = new MeshBasicMaterial({ color: 0xff33dd })
+
+class AxisObject extends VisObject {
   constructor (params={}) {
-    super({ geometry: paperTriangle, clickable: true, material: triangleMaterial })
-    window.cow = this
+    super({ geometry: nullGeometry, material: axisMaterial })
+
+    this.normal = params.normal ?? new Vector3()
+    this.axisLen = 1
+    this.girth = 0.04
+
+    this.littleGirth = 0.02
+    this.subtends = Math.PI / 4
+    this.subtendsShift = 0.1
+
+    this.computeChildren()
+    window.axis = this
+  }
+
+  computeChildren () {
+    // Set this geometry based on current stuff
+    this.children.forEach(child => child.dispose())
+    if (this.geometry !== nullGeometry) this.geometry.dispose()
+
+    let n = this.normal
+    if (n.length() < 0.2) {
+      this.geometry = nullGeometry
+      return
+    }
+
+    n.normalize().multiplyScalar(this.axisLen)
+
+    let b = n.clone().multiplyScalar(-1)
+    let e = n
+
+    // b --> e axis
+    let axisGeometry = generateArrow([ b, e ], { shaftGirth: this.girth, coneGirth: this.girth * 2, coneLen: this.girth * 3 })
+    axisGeometry.computeVertexNormals()
+
+    this.geometry = axisGeometry
+    console.log(this.geometry)
+  }
+}
+
+const generalMaterial = new THREE.MeshBasicMaterial ({ vertexColors: true })
+
+class SymmetricalObject extends VisObject {
+  constructor (params={}) {
+    let shape = params.shape
+    if (!shape) throw new Error("fuck you")
+
+    let geometry = shape.geometry
+    let faceColors = shape.faceColors
+
+    let material = triangleMaterial
+
+    if (faceColors) {
+      geometry.setAttribute("color",
+        new Float32BufferAttribute(faceColors
+          .map(c => new Color(c).toArray())
+          .map(c => c).flat(Infinity), 3))
+
+      material = generalMaterial
+    }
+
+    geometry.computeVertexNormals()
+    super({ geometry, clickable: false, material })
 
     this.position.set(0, 0, 0)
 
-    this.labels = [] /*paperTriangle.midriff.map((v, i) => {
-      v = v.clone().multiplyScalar(1.1)
-      return new VisText({ text: (i+1)+'', position: v })
-    })*/
-
-    this.labels.forEach(l => this.add(l))
-
-    this.unselectedMaterial = triangleMaterial
-    this.selectedMaterial = selectedTriangleMaterial
-
     this.inMotion = false
+    this.shape = params.shape
     this.currentMotion =
 
     this.onAfterRender = () => {
       if (this.inMotion) {
 
       }
+    }
+
+    this.axisObjects = []
+    this.planeObjects = []
+
+    this.showAxisObjects(true)
+  }
+
+  showAxisObjects (show=true) {
+    this.axisObjects.forEach(a => {
+      this.remove(a)
+      a.geometry.dispose()
+    })
+
+    if (show) {
+      let o = this.axisObjects = []
+
+      for (let axis of this.shape.axes) {
+        o.push(new AxisObject({
+          normal: axis
+        }))
+      }
+
+      this.axisObjects.forEach(o => this.add(o))
     }
   }
 }
@@ -475,11 +558,6 @@ class ReflectivePlaneObject extends VisObject {
   }
 }
 
-class AxisObject extends VisObject {
-  constructor (params={}) {
-    super()
-  }
-}
 
 function init() {
   console.log("init")
@@ -490,8 +568,11 @@ function init() {
 
   scene.add(light);
 
-  let triangle = new TriangleObject()
-  scene.add(triangle);
+  miniatureScene.add(new SpotLight( 0xffffff, 1.5 ))
+  miniatureScene.add(new AmbientLight( 0xeeeeee ) );
+
+  miniatureScene.add(new SymmetricalObject({ shape: SHAPES.cube }))
+  miniatureScene.add(new AxisObject({ normal: new Vector3(1, 1, 1) }))
 }
 
 function dragStartCallback(event) {
@@ -503,6 +584,7 @@ function dragStartCallback(event) {
 function dragendCallback(event) {
   if (event.object.selectedMaterial)
     event.object.material = event.object.unselectedMaterial
+
   controlControls(true)
 }
 
@@ -514,15 +596,15 @@ function controlControls (enabled) {
   }
 }
 
-import * as S from "./symmetries.js"
-import {generateArrow} from "./symmetries.js"
-Object.assign(window, S)
+import {generateArrow, SHAPES} from "./symmetries.js"
+Object.assign(window, { SHAPES })
 
 function animate() {
   requestAnimationFrame( animate );
 
   disableOrbitIfMouseDownOnObject()
   orbitControls.update()
+  miniatureControls.update()
 
   displayedTextElems = []
   camera.updateProjectionMatrix()
@@ -530,7 +612,24 @@ function animate() {
   renderer.render(scene, camera);
   drawTextElements(displayedTextElems)
   drawSVGOrientator()
+
+  displayedTextElems = []
+
+  miniatureCamera.updateProjectionMatrix()
+  miniatureRenderer.render(miniatureScene, miniatureCamera)
+  //drawTextElements(displayedTextElems, miniatureSceneSVG)
 }
+
+let miniatureCamera = new PerspectiveCamera( 70, 0, 0.0001, 1000 )
+let miniatureScene = new Scene()
+let miniatureRenderer = new WebGLRenderer()
+let miniatureControls = new OrbitControls(miniatureCamera, miniatureRenderer.domElement)
+
+miniatureControls.enableKeys = false
+setDefaultMiniatureCamera()
+
+DOM.miniature.appendChild(miniatureRenderer.domElement)
+new ResizeObserver(resizeRenderer).observe(DOM.items)
 
 setStyleDefaults()
 

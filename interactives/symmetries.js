@@ -1,5 +1,15 @@
-import {Vector2, Vector3, Matrix4, Matrix3, Quaternion, BufferGeometry} from "../external/three.module.js"
+import {
+  Vector2,
+  Vector3,
+  Matrix4,
+  Matrix3,
+  Quaternion,
+  BufferGeometry,
+  BoxGeometry,
+  BoxBufferGeometry
+} from "../external/three.module.js"
 import {deepEquals} from "./common.js"
+import {ConvexGeometry} from "./orbit_controls.js"
 
 // Helper stuffs for symmetries, etc.
 
@@ -16,19 +26,21 @@ export class SymmetricShape {
     this.dimensions = params.dimensions // should be 2 or 3
     this.vertices = params.vertices // vertices centered around (0, 0, 0)
 
-    this.axes = []
-    this.axisNames = [] // axes in which this shape is symmetrical in
-    this.reflectiveNormals = [] // normals of reflective planes this shape is symmetrical in
-    this.rNormNames = []
-
     this.normalizeVertexDimensions()
 
     let generators = params.generators?.map(g => Array.isArray(g) ? new Motion(g) : motionFromMatrix(this, g)) ?? []
     generators.map((g, i) => { if (!g) throw new Error(`Generator at index ${i} is fucked up`)})
 
     let group = this.fullSymmetryGroup = computeSymmetryGroup(this, generators)
-    this.axes = group.getAxes()
-    this.reflectiveNormals = null//group.getReflectiveNormals()
+
+    this.axes = group.getAxes() // axes in which this shape is symmetrical in
+    this.reflectiveNormals = group.getReflectiveNormals() // normals of reflective planes this shape is symmetrical in
+
+    this.axisNames = []
+    this.rNormNames = []
+
+    this.faceColors = params.faceColors ?? null
+    this.geometry = params.geometry ?? new ConvexGeometry(this.vertices)
   }
 
   normalizeVertexDimensions() {
@@ -257,10 +269,10 @@ function closelyEquilinear (v1, v2) {
   }
 
   let av1x = v2.x * r
-  let av2x = v2.y * r
-  let av3x = v2.z * r
+  let av1y = v2.y * r
+  let av1z = v2.z * r
 
-  return (closeEnough(av1x, v1.x) && closeEnough(av2x, v1.y) && closeEnough(av3x, v1.z))
+  return (closeEnough(av1x, v1.x) && closeEnough(av1y, v1.y) && closeEnough(av1z, v1.z))
 }
 
 export class SymmetryGroup {
@@ -274,11 +286,35 @@ export class SymmetryGroup {
 
     let axes = []
 
+    for (let elem of this.elements) {
+      let explain = explainMatrix(elem.toMatrix(this.shape))
+      if (explain.length === 1 && explain[0].type === "rotation") explain = explain[0]
+      else continue
+
+      axes.push(explain.axis)
+    }
+
     // remove axes if they are equilinear to another axis
+    let filtered = []
+    axes.forEach(a => {
+      if (!filtered.some(m => closelyEquilinear(a, m))) filtered.push(a)
+    })
 
-    let filteredAxes = axes.filter((a, i) => axes.every((a2, _i) => _i === i || closelyEquilinear(a, a2)))
+    return filtered
+  }
 
-    return filteredAxes
+  getReflectiveNormals () {
+    let norms = []
+
+    for (let elem of this.elements) {
+      let explain = explainMatrix(elem.toMatrix(this.shape))
+      if (explain.length === 1 && explain[0].type === "reflection") explain = explain[0]
+      else continue
+
+      norms.push(explain.normal)
+    }
+
+    return norms
   }
 }
 
@@ -317,8 +353,10 @@ function generateSkinnyPolygon(n) {
   return fattenPolygon(generateRegularPolygon(n), 0.1)
 }
 
+let cs = x => x >= 0 ? 1 : -1
+
 function getCylinderBasis (n, girth) {
-  let p = new Vector3(n.z * Math.sign(n.x), n.z * Math.sign(n.y), -(Math.abs(n.x) + Math.abs(n.y)) * Math.sign(n.z)).normalize().multiplyScalar(girth)
+  let p = new Vector3(n.z * cs(n.x), n.z * cs(n.y), -(Math.abs(n.x) + Math.abs(n.y)) * cs(n.z)).normalize().multiplyScalar(girth)
   let q = new Vector3().crossVectors(n, p).normalize().multiplyScalar(girth)
 
   return [ p, q ]
@@ -333,10 +371,8 @@ function getCylinderBasis (n, girth) {
  * @param coneGirth
  * @param coneLen
  */
-export function generateArrow (verts, { res=8, showCone = true, shaftGirth = 0.1, coneGirth = 0.2, coneLen = 0.5 } = {}) {
+export function generateArrow (verts, { res=16, showCone = true, shaftGirth = 0.1, coneGirth = 0.2, coneLen = 0.5 } = {}) {
   // We basically strategically generate a bunch of cylinders
-  let geometry = new THREE.BufferGeometry()
-
   let geoV = []
   let n = new Vector3()
 
@@ -397,29 +433,17 @@ export function generateArrow (verts, { res=8, showCone = true, shaftGirth = 0.1
       v2.addVectors(last, d2)
 
       geoV.push(
-        v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, last.x, last.y, last.z, // cap triangle
+        v1.x, v1.y, v1.z, last.x, last.y, last.z, v2.x, v2.y, v2.z, // cap triangle
         v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, tip.x, tip.y, tip.z // to tip
       )
-
-
     }
   }
-
-  console.log(geoV)
 
   let geo = new BufferGeometry()
   geo.setAttribute("position", new THREE.BufferAttribute( new Float32Array(geoV), 3 ))
   geo.computeVertexNormals()
 
   return geo
-}
-
-/**
- *
- * @param n {Vector3}
- * @param l {number}
- */
-function generateAxisGeometry (n, l) {
 }
 
 export const SHAPES = {
@@ -436,7 +460,7 @@ export const SHAPES = {
   triangularPrism: new SymmetricShape({
     name: "equilateral triangular prism",
     dimensions: 3,
-    vertices: fattenPolygon(generateRegularPolygon(3), 1),
+    vertices: fattenPolygon(generateRegularPolygon(3), 2),
     rNormNames: [ 'A', 'B', 'C', 'P' ],
     generators: [
       new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
@@ -453,6 +477,16 @@ export const SHAPES = {
       new Matrix4().makeRotationY(Math.PI / 2),
       new Matrix4().makeRotationZ(Math.PI / 2),
       new Matrix4().makeScale(1, -1, 1) // reflection
+    ],
+    geometry: new BoxBufferGeometry(1, 1, 1),
+    // Face colors/attributes, vertex labels
+    faceColors: [
+      0xffffff, 0xffffff, 0xffffff, 0xffffff,
+      0xffff00, 0xffff00, 0xffff00, 0xffff00,
+      0xff8800, 0xff8800, 0xff8800, 0xff8800,
+      0xff0000, 0xff0000, 0xff0000, 0xff0000,
+      0x00ff00, 0x00ff00, 0x00ff00, 0x00ff00,
+      0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
     ]
   })
 }
