@@ -1,4 +1,4 @@
-import {Vector2, Vector3, Matrix4, Matrix3, Quaternion} from "../external/three.module.js"
+import {Vector2, Vector3, Matrix4, Matrix3, Quaternion, BufferGeometry} from "../external/three.module.js"
 import {deepEquals} from "./common.js"
 
 // Helper stuffs for symmetries, etc.
@@ -128,10 +128,6 @@ export function explainMatrix (mat4) {
     return a.map((v, i) => Math.abs(v - b[i])).reduce((a, b) => a + b) < 1e-6
   }
 
-  function detectReflection (m) {
-
-  }
-
   if (detectIdentity(mat4)) return [ { type: "identity", m: mat4 } ]
 
   let q = new Quaternion()
@@ -183,10 +179,6 @@ export function explainMatrix (mat4) {
 
 export function radiansToReadable (r) {
   return Math.round(r * 180 / Math.PI) + '°'
-}
-
-export function isMatrixReflection (mat4) {
-
 }
 
 export class Motion {
@@ -323,6 +315,111 @@ export function fattenPolygon (vertices, thickness=0.5) {
 
 function generateSkinnyPolygon(n) {
   return fattenPolygon(generateRegularPolygon(n), 0.1)
+}
+
+function getCylinderBasis (n, girth) {
+  let p = new Vector3(n.z * Math.sign(n.x), n.z * Math.sign(n.y), -(Math.abs(n.x) + Math.abs(n.y)) * Math.sign(n.z)).normalize().multiplyScalar(girth)
+  let q = new Vector3().crossVectors(n, p).normalize().multiplyScalar(girth)
+
+  return [ p, q ]
+}
+
+/**
+ *
+ * @param verts {Vector3[]}
+ * @param res
+ * @param showCone
+ * @param shaftGirth
+ * @param coneGirth
+ * @param coneLen
+ */
+export function generateArrow (verts, { res=8, showCone = true, shaftGirth = 0.1, coneGirth = 0.2, coneLen = 0.5 } = {}) {
+  // We basically strategically generate a bunch of cylinders
+  let geometry = new THREE.BufferGeometry()
+
+  let geoV = []
+  let n = new Vector3()
+
+  for (let i = 0; i < verts.length - 1; ++i) {
+    let pv = verts[i]
+    let nv = verts[i+1]
+
+    // Draw cylinder starting at pv, ending at nv, radius shaftGirth, resolution 8
+    n.subVectors(nv, pv).normalize()
+    let [ p, q ] = getCylinderBasis(n, shaftGirth)
+
+    // EXTREMELY UNOPTIMIZED LOL
+    let v1 = new Vector3(), v2 = new Vector3(), v3 = new Vector3(), v4 = new Vector3(), d1 = new Vector3(), d2 = new Vector3()
+
+    for (let i = 0; i < res; ++i) {
+      // For each rectangle...
+      let c1 = Math.cos(i / res * 2 * Math.PI)
+      let s1 = Math.sin(i / res * 2 * Math.PI)
+      let c2 = Math.cos((i+1) / res * 2 * Math.PI)
+      let s2 = Math.sin((i+1) / res * 2 * Math.PI)
+
+      d1 = p.clone().multiplyScalar(c1).add(q.clone().multiplyScalar(s1))
+      d2 = p.clone().multiplyScalar(c2).add(q.clone().multiplyScalar(s2))
+
+      v1.addVectors(pv, d1)
+      v2.addVectors(pv, d2)
+      v3.addVectors(nv, d1)
+      v4.addVectors(nv, d2)
+
+      geoV.push(
+        v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, // triangle 1
+        v4.x, v4.y, v4.z, v3.x, v3.y, v3.z, v2.x, v2.y, v2.z,  // triangle 2
+        pv.x, pv.y, pv.z, v2.x, v2.y, v2.z, v1.x, v1.y, v1.z, // cap 1 triangle
+        nv.x, nv.y, nv.z, v3.x, v3.y, v3.z, v4.x, v4.y, v4.z // cap 2 triangle
+      )
+    }
+  }
+
+  // n is last normal, add cone
+  if (showCone) {
+    let [ p, q ] = getCylinderBasis(n, coneGirth)
+    let last = verts[verts.length - 1]
+    let tip = last.clone().add(n.clone().multiplyScalar(coneLen))
+
+    let v1 = new Vector3(), v2 = new Vector3(), d1 = new Vector3(), d2 = new Vector3()
+
+    for (let i = 0; i < res; ++i) {
+      // For each rectangle...
+      let c1 = Math.cos(i / res * 2 * Math.PI)
+      let s1 = Math.sin(i / res * 2 * Math.PI)
+      let c2 = Math.cos((i+1) / res * 2 * Math.PI)
+      let s2 = Math.sin((i+1) / res * 2 * Math.PI)
+
+      d1 = p.clone().multiplyScalar(c1).add(q.clone().multiplyScalar(s1))
+      d2 = p.clone().multiplyScalar(c2).add(q.clone().multiplyScalar(s2))
+
+      v1.addVectors(last, d1)
+      v2.addVectors(last, d2)
+
+      geoV.push(
+        v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, last.x, last.y, last.z, // cap triangle
+        v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, tip.x, tip.y, tip.z // to tip
+      )
+
+
+    }
+  }
+
+  console.log(geoV)
+
+  let geo = new BufferGeometry()
+  geo.setAttribute("position", new THREE.BufferAttribute( new Float32Array(geoV), 3 ))
+  geo.computeVertexNormals()
+
+  return geo
+}
+
+/**
+ *
+ * @param n {Vector3}
+ * @param l {number}
+ */
+function generateAxisGeometry (n, l) {
 }
 
 export const SHAPES = {

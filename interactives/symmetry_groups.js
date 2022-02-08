@@ -1,25 +1,40 @@
-import * as THREE_UNEXTENDED from '../external/three.module.js';
+import {
+  Vector2,
+  Vector3,
+  Matrix4,
+  Mesh,
+  MeshLambertMaterial,
+  Scene,
+  WebGLRenderer,
+  PerspectiveCamera,
+  Plane,
+  GridHelper,
+  Raycaster,
+  BufferGeometry,
+  Color,
+  AmbientLight,
+  SpotLight,
+  CylinderGeometry
+} from '../external/three.module.js'
 import {OrbitControls, DragControls, ConvexGeometry} from "./orbit_controls.js"
 import {deepEquals} from "./common.js"
 
 // Major props to https://github.com/learnthreejs/three-js-boilerplate for getting me started!
 
-const THREE = Object.freeze({... THREE_UNEXTENDED, OrbitControls, DragControls, ConvexGeometry })
-
 // Styling info for y'all
 // You can just set the value in styles and it will automatically update
 let styles = {
   triangleColor: { default: 0x8f8f1f, handler: setColor(() => triangleMaterial) },
-  gridColor: { default: 0x888888, handler: v => grid.colorCenterLine = grid.colorGrid = new THREE.Color(v) },
-  backgroundColor: { default: 0xf0f0f0, handler: v => scene.background = new THREE.Color(v) },
+  gridColor: { default: 0x888888, handler: v => grid.colorCenterLine = grid.colorGrid = new Color(v) },
+  backgroundColor: { default: 0xf0f0f0, handler: v => scene.background = new Color(v) },
   selectedTriangleColor: { default: 0x3f3f3f, handler: setColor(() => selectedTriangleMaterial)},
   allow3DRotation: { default: false, handler: allow3DRotation }
 }
 
 // Note, if you change this you will have to change some other stuff
-const SIZE = 2500
+const SIZE = 15
 const gridDivisions = 15;
-const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, SIZE / 2, 0) // points toward (0, 0, 0)
+const DEFAULT_CAMERA_POSITION = new Vector3(0, SIZE / 2, 0) // points toward (0, 0, 0)
 
 const paperThickness = 6;
 
@@ -27,7 +42,7 @@ const SCALE = SIZE / gridDivisions
 const gridSize = SIZE
 
 function setColor(target) {
-  return v => target().color = new THREE.Color(v)
+  return v => target().color = new Color(v)
 }
 
 function setStyleDefaults () {
@@ -52,17 +67,17 @@ styles = new Proxy(styles, {
 
 window.styles = styles
 
-let triangleMaterial = new THREE.MeshLambertMaterial()
-let selectedTriangleMaterial = new THREE.MeshLambertMaterial()
+let triangleMaterial = new MeshLambertMaterial()
+let selectedTriangleMaterial = new MeshLambertMaterial()
 
-var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera( 70, 0, 10, 10000 );
+var scene = new Scene();
+var camera = new PerspectiveCamera( 70, 0, 0.01, 1000 );
 var clickableObjects = [];
 
 // Plane of the grid
-let workingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0))
+let workingPlane = new Plane(new Vector3(0, 1, 0))
 
-let grid = new THREE.GridHelper(gridSize, gridDivisions);
+let grid = new GridHelper(gridSize, gridDivisions);
 scene.add(grid)
 
 let DOMList = {
@@ -96,8 +111,10 @@ const DOM = {}
 for (let [ name, id ] of Object.entries(DOMList))
   if (!(DOM[name] = document.getElementById(id))) throw new Error(`Id ${id} no exist`)
 
-var renderer = new THREE.WebGLRenderer();
+var renderer = new WebGLRenderer();
 window.onload = resizeRenderer
+
+import * as THREE from '../external/three.module.js';
 
 Object.assign(window, { THREE, DOM, renderer })
 
@@ -203,7 +220,7 @@ function setElemProps (textElem, dict) {
   }
 }
 
-let orientatorRaycaster = new THREE.Raycaster()
+let orientatorRaycaster = new Raycaster()
 
 function drawSVGOrientator () {
   // A little widget in the bottom left that shows which direction is x and y
@@ -214,8 +231,8 @@ function drawSVGOrientator () {
 
   let size = DOM.drawingSurface.getBoundingClientRect()
 
-  let V2 = THREE.Vector2
-  let V3 = THREE.Vector3
+  let V2 = Vector2
+  let V3 = Vector3
 
   let samplingCorner = new V2(size.height / 2, size.height / 2)
   let corner = new V2(SPACING, size.height - SPACING)
@@ -258,8 +275,8 @@ function resizeRenderer () {
   textSVG.setAttribute("height", s.height)
 }
 
-const raycaster = new THREE.Raycaster();
-const mousePos = new THREE.Vector2();
+const raycaster = new Raycaster();
+const mousePos = new Vector2();
 
 let isMouseDown = false
 
@@ -278,9 +295,9 @@ function disableOrbitIfMouseDownOnObject () {
     orbitControls.enabled = (intersects.length === 0)
 }
 
-var orbitControls = new THREE.OrbitControls(camera, renderer.domElement)
+var orbitControls = new OrbitControls(camera, renderer.domElement)
 
-var controls = new THREE.DragControls( clickableObjects, camera, renderer.domElement );
+var controls = new DragControls( clickableObjects, camera, renderer.domElement );
 controls.addEventListener( 'dragstart', dragStartCallback );
 controls.addEventListener( 'dragend', dragendCallback );
 
@@ -299,12 +316,12 @@ setDefaultCamera()
 
 var startColor;
 
-const nullGeometry = new THREE.BufferGeometry()
-const nullMaterial = new THREE.MeshLambertMaterial()
+const nullGeometry = new BufferGeometry()
+const nullMaterial = new MeshLambertMaterial()
 
 function drawToDOMCoords (v) {
-  let size = renderer.getSize(new THREE.Vector2())
-  v = new THREE.Vector2(v.x, v.y)
+  let size = renderer.getSize(new Vector2())
+  v = new Vector2(v.x, v.y)
 
   v.x = (v.x * size.x / 2) + size.x / 2
   v.y = -(v.y * size.y / 2) + size.y / 2
@@ -313,7 +330,7 @@ function drawToDOMCoords (v) {
 }
 
 function domToDrawCoords (v) {
-  let size = renderer.getSize(new THREE.Vector2())
+  let size = renderer.getSize(new Vector2())
   v = v.clone()
 
   v.x = (v.x - size.x / 2) * 2 / size.x
@@ -322,22 +339,22 @@ function domToDrawCoords (v) {
   return v
 }
 
-class VisText extends THREE.Mesh {
+class VisText extends Mesh {
   constructor(params={}) {
     super(nullGeometry, nullMaterial)
 
     this.text = params.text
 
     // Adjust text position, in pixels
-    this.adjust = new THREE.Vector2(0, 0)
+    this.adjust = new Vector2(0, 0)
 
-    this.position.copy(params.position ?? new THREE.Vector3(0,0,0))
+    this.position.copy(params.position ?? new Vector3(0,0,0))
 
     this.onAfterRender = () => {
       camera.updateMatrixWorld()
       this.updateMatrixWorld()
 
-      let v = new THREE.Vector3()
+      let v = new Vector3()
       v.setFromMatrixPosition(this.matrixWorld)
       v.project(camera)
 
@@ -357,9 +374,9 @@ class VisText extends THREE.Mesh {
   }
 }
 
-class VisObject extends THREE.Mesh {
+class VisObject extends Mesh {
   constructor(params={}) {
-    super(params.geometry, params.material ?? new THREE.MeshLambertMaterial({color: 0xdfdfdf}))
+    super(params.geometry, params.material ?? new MeshLambertMaterial({color: 0xdfdfdf}))
 
     this.position.set(params.position)
     this.clickable = !!params.clickable
@@ -405,14 +422,14 @@ function generateRegularPolygon(n=3, circumradius=SCALE, thickness = paperThickn
   for (let i = 0; i < n; ++i) {
     let x = Math.cos(i / n * 2 * Math.PI) * circumradius
     let z = Math.sin(i / n * 2 * Math.PI) * circumradius
-    points.push(new THREE.Vector3(x, thickness / 2, z))
-    points.push(new THREE.Vector3(x, -thickness / 2, z))
-    midriff.push(new THREE.Vector3(x, 0, z))
+    points.push(new Vector3(x, thickness / 2, z))
+    points.push(new Vector3(x, -thickness / 2, z))
+    midriff.push(new Vector3(x, 0, z))
   }
-  return { g: new THREE.ConvexGeometry(points), midriff }
+  return { g: new ConvexGeometry(points), midriff }
 }
 
-let paperTriangle = generateRegularPolygon(3)
+let paperTriangle = generateArrow([ new Vector3(0,0,0), new Vector3(1,1,1) ])
 window.g = paperTriangle
 
 // We represent a movement as a permutation of vertices. Not all permutations of vertices are valid for certain shapes!
@@ -426,14 +443,15 @@ class Motion {
 
 class TriangleObject extends VisObject {
   constructor (params={}) {
-    super({ geometry: paperTriangle.g, clickable: true, material: triangleMaterial })
+    super({ geometry: paperTriangle, clickable: true, material: triangleMaterial })
+    window.cow = this
 
     this.position.set(0, 0, 0)
 
-    this.labels = paperTriangle.midriff.map((v, i) => {
+    this.labels = [] /*paperTriangle.midriff.map((v, i) => {
       v = v.clone().multiplyScalar(1.1)
       return new VisText({ text: (i+1)+'', position: v })
-    })
+    })*/
 
     this.labels.forEach(l => this.add(l))
 
@@ -465,9 +483,9 @@ class AxisObject extends VisObject {
 
 function init() {
   console.log("init")
-  scene.add( new THREE.AmbientLight( 0xbbbbbb ) );
+  scene.add( new AmbientLight( 0xbbbbbb ) );
 
-  var light = new THREE.SpotLight( 0xffffff, 1.5 );
+  var light = new SpotLight( 0xffffff, 1.5 );
   light.position.set( 0, 500, 2000 );
 
   scene.add(light);
@@ -497,6 +515,7 @@ function controlControls (enabled) {
 }
 
 import * as S from "./symmetries.js"
+import {generateArrow} from "./symmetries.js"
 Object.assign(window, S)
 
 function animate() {
