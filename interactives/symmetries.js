@@ -8,8 +8,7 @@ import {
   BoxGeometry,
   BoxBufferGeometry
 } from "../external/three.module.js"
-import {deepEquals} from "./common.js"
-import {ConvexGeometry} from "./orbit_controls.js"
+import {ConvexGeometry} from "../external/three_addons.js"
 
 // Helper stuffs for symmetries, etc.
 
@@ -462,7 +461,7 @@ export const SHAPES = {
   triangularPrism: new SymmetricShape({
     name: "equilateral triangular prism",
     dimensions: 3,
-    vertices: fattenPolygon(generateRegularPolygon(3), 2),
+    vertices: fattenPolygon(generateRegularPolygon(3, 0.7), 1.4),
     rNormNames: [ 'A', 'B', 'C', 'P' ],
     generators: [
       new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
