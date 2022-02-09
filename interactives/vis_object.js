@@ -12,16 +12,25 @@ class VisObject extends Mesh {
   }
 
   addVisEventListener (name, listener) {
-    if (!(this.visEventListeners[name] ?? (this.visEventListeners[name] = [])).includes(listener))
-      this.clickEventListeners.push(listener)
+    let l = this.visEventListeners[name]
+    if (!l) l = this.visEventListeners[name] = []
+
+    if (!l.includes(listener))
+      l.push(listener)
   }
 
   removeVisEventListener (name, listener) {
-    this.clickEventListeners = this.clickEventListeners.filter(l => l !== listener)
+    let l = this.visEventListeners[name]
+    if (l) this.visEventListeners[name] = l.filter(l => l !== listener)
   }
 
-  triggerEvent (evt) {
-    this.clickEventListeners[evt]?.forEach(l => l(evt, this))
+  triggerEvent (name, evt) {
+    this.visEventListeners[name]?.forEach(l => l(evt, this))
+  }
+
+  castrate () {
+    this.visEventListeners = {}
+    this.clickable = false
   }
 
   // Whether we can interact
@@ -48,7 +57,7 @@ class VisObject extends Mesh {
     this.domain = d
     this.children.forEach(c => c.setDomain?.(d))
 
-    this.clickable = !!d && this.clickable
+    this.clickable = this.clickable
   }
 
   add (...args) {

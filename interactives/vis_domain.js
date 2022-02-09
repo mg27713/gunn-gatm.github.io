@@ -64,10 +64,15 @@ class VisDomain {
     this.scene.domain = this
 
     this.raycaster = new Raycaster();
-    this.mousePos = new Vector2();
+    this.mousePos = new Vector2(-Infinity, -Infinity);
 
     this.isMouseDown = false
     this.mouseDownOn = null // object on which mouse clicked
+    this.hovering = null // object hovering on
+
+    this.selected = null // either type: "axis" or type: "plane", with obj: <the relevant object>.
+    // when something is selected, no hover events are dispatched at all. click events are only dispatched to the
+    // selected object.
 
     this.init()
   }
@@ -149,14 +154,13 @@ class VisDomain {
 
     scene.add(light);
 
-    this.drawingSurface.addEventListener("mousemove", e => this.onMouseMove(e))
-    this.drawingSurface.addEventListener("mousedown", e => this.onMouseDown(e))
-    this.drawingSurface.addEventListener("mouseup", e => this.onMouseUp(e))
+    this.drawingSurface.addEventListener("mousemove", e => this.onMouseMove(e), false)
+    this.drawingSurface.addEventListener("mousedown", e => this.onMouseDown(e), false)
+    this.drawingSurface.addEventListener("mouseup", e => this.onMouseUp(e), false)
   }
 
   onMouseMove (event) {
-    this.mousePos.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    this.mousePos.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    this.mousePos.copy(this.DOMToDrawCoords(new Vector2(event.x, event.y), true))
   }
 
   allow3DRotation (v) {
@@ -167,11 +171,12 @@ class VisDomain {
       if (!v) {
         this.setDefaultCamera()
         this.useTranslationControls = true
-        this.orbitControls.enabled = false
+        this.orbitControls.enableRotate = false
       } else {
         this.useTranslationControls = false
         this.orbitControls.maxPolarAngle = Math.PI / 2 - 0.1 // prevent from going under the grid
         this.orbitControls.enabled = true
+        this.orbitControls.enableRotate = true
       }
   }
 
@@ -179,30 +184,54 @@ class VisDomain {
     this.onMouseMove(e)
     this.isMouseDown = true
 
-    this.ifMouseDownOnObject()
+    this.mouseDownOn = this.ifMouseDownOnObject()
+    this.onMouseMove(e)
   }
 
   ifMouseDownOnObject () {
-    if (!this.isMouseDown) return
-
     this.raycaster.setFromCamera(this.mousePos, this.camera);
     const intersects = this.raycaster.intersectObjects(this.clickableObjects);
 
     // Disable orbit controls if applicable
-    this.orbitControls.enabled = !this.useTranslationControls && (intersects.length === 0)
-    this.mouseDownOn = (intersects.length === 0) ? null : intersects[0]
+
+    let on = (intersects.length === 0) ? null : intersects[0].object
+
+    if (this.isMouseDown && on)
+      this.orbitControls.enabled = !this.useTranslationControls
+
+    if (on !== this.hovering && !this.selected) { // ignore hovered if something is selected
+      let old = this.hovering
+      this.hovering = on
+
+      if (old) {
+        old.triggerEvent?.("hover_off")
+      }
+
+      if (on) {
+        on.triggerEvent?.("hover")
+      }
+    }
+
+    return on
   }
 
   onMouseUp () {
     this.isMouseDown = false
 
-    if (this.mouseDownOn) {
+    let on = this.ifMouseDownOnObject()
+
+    if (on && on === this.mouseDownOn) {
       // Clicked on an object
-      this.mouseDownOn.triggerEvent({ type: "click", pos: this.mousePos })
+      on.triggerEvent?.("click", { pos: this.mousePos })
     }
   }
 
+  resetDisplayedSymmetries () {
+
+  }
+
   tick () {
+    this.ifMouseDownOnObject()
     this.orbitControls.update()
     this.camera.updateProjectionMatrix()
 

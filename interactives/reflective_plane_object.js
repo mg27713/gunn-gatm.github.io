@@ -10,15 +10,76 @@ let planeMaterial = new MeshBasicMaterial({
   color: new Color(0.5, 0.5, 0.5)
 })
 
+let planeHoverMaterial = new MeshBasicMaterial({
+  transparent: true,
+  opacity: 0.8,
+  color: new Color(0.5, 0.5, 0.5)
+})
+
+let planeIrrelevantMaterial = new MeshBasicMaterial({
+  transparent: true,
+  opacity: 0.1,
+  color: new Color(0.5, 0.5, 0.5)
+})
+
+
 class ReflectivePlaneObject extends VisObject {
   constructor (params={}) {
-    super({ geometry: nullGeometry, material: planeMaterial })
+    super({ geometry: nullGeometry, material: planeMaterial, ...params })
 
     this.normal = params.normal ?? new Vector3()
     this.thickness = 0.01
     this.width = this.height = 1.5
 
     this.setNormal()
+
+    this.addVisEventListener("hover", () => {
+      this.parent.restoreMaterials()
+    })
+
+    this.addVisEventListener("hover_off", () => {
+      this.parent.restoreMaterials()
+    })
+
+    this.addVisEventListener("click", () => {
+      this.parent.selectSym(this)
+    })
+  }
+
+  isSymIndicator () {
+
+  }
+
+  /**
+   *
+   * @param m {string} "default", "selected", "hover", "irrelevant", "hidden"
+   */
+  setMaterial (m) {
+    let mat = null, vis = true
+
+    switch (m) {
+      case "default":
+        mat = planeMaterial
+        break
+      case "selected":
+        mat = planeMaterial
+        break
+      case "hover":
+        mat = planeHoverMaterial
+        break
+      case "irrelevant":
+        mat = planeIrrelevantMaterial
+        break
+      case "hidden":
+        mat = planeMaterial
+        vis = false
+        break
+      default:
+        throw new Error(m)
+    }
+
+    this.visible = vis
+    this.material = mat
   }
 
   setNormal () {
@@ -39,8 +100,6 @@ class ReflectivePlaneObject extends VisObject {
           d1.y * a + d2.y * b + t2 * c,
           d1.z * a + d2.z * b + t2 * c
         )))
-
-    console.log(verts)
 
     this.geometry !== nullGeometry ? this.geometry.dispose : "空"
     this.geometry = new ConvexGeometry(verts)
