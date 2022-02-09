@@ -185,12 +185,14 @@ let demonstration
 function clearDemonstration () {
   // Translate n in the +x direction
   demonstration?.dispose()
-  demonstration = null
   mainDomain.scene.remove(demonstration)
+  demonstration = null
 }
 
 function demonstrateCongaLine () {
     if (congaLine.length <= 1) return
+
+  if (congaInMotion) return
 
   let first = congaLine[0]
     let last = congaLine[congaLine.length - 1]
@@ -201,13 +203,14 @@ function demonstrateCongaLine () {
   n.position.add(shiftDown)
   let n2 = n.castratedClone()
 
-clearDemonstration()
+  clearDemonstration()
 
   demonstration = new VisObject()
   mainDomain.scene.add(demonstration)
 
   demonstration.add(n)
   demonstration.add(n2)
+
   allowClick(n)
   allowClick(n2)
 
