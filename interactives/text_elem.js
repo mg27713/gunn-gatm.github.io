@@ -15,6 +15,7 @@ class VisText extends VisObject {
     this.adjust = new Vector2(0, 0)
 
     this.position.copy(params.position ?? new Vector3(0,0,0))
+    this.frustumCulled = false
 
     this.onAfterRender = () => {
       if (!this.domain) return

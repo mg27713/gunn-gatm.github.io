@@ -22,13 +22,12 @@ let planeIrrelevantMaterial = new MeshBasicMaterial({
   color: new Color(0.5, 0.5, 0.5)
 })
 
-
 class ReflectivePlaneObject extends VisObject {
   constructor (params={}) {
     super({ geometry: nullGeometry, material: planeMaterial, ...params })
 
     this.normal = params.normal ?? new Vector3()
-    this.thickness = 0.01
+    this.thickness = 0.03
     this.width = this.height = 1.5
 
     this.setNormal()

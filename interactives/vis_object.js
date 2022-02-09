@@ -1,4 +1,5 @@
 import {Mesh, MeshLambertMaterial} from "../external/three.module.js"
+import {nullGeometry} from "./null.js"
 
 class VisObject extends Mesh {
   constructor(params={}) {
@@ -26,6 +27,7 @@ class VisObject extends Mesh {
 
   triggerEvent (name, evt) {
     this.visEventListeners[name]?.forEach(l => l(evt, this))
+    this.parent?.triggerEvent?.(name, evt)
   }
 
   castrate () {
@@ -67,14 +69,14 @@ class VisObject extends Mesh {
 
   remove (...args) {
     super.remove(...args)
-    args.forEach(a => a.clickable = false)
-    this.setDomain(null)
+    args.forEach(a => a && (a.clickable = false))
   }
 
   dispose () {
-    super.dispose()
+    this.geometry !== nullGeometry ? this.geometry.dispose() : '空'
+    this.children.forEach(c => c.dispose())
+
     this.clickable = false
-    this.setDomain(null)
   }
 }
 
