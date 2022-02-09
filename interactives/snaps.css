@@ -189,3 +189,7 @@ h2 {
     margin: auto 0;
     height: 350px;
 }
+
+.hidden {
+    display: none;
+}

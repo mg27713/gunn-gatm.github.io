@@ -92,6 +92,9 @@ export class SymmetricObject extends VisObject {
 
       this.axisObjects.forEach(o => this.add(o))
     }
+    else {
+      window.dispatchEvent(new CustomEvent("on deselected"))
+    }
   }
 
   selectSym (o) {
@@ -100,6 +103,7 @@ export class SymmetricObject extends VisObject {
     if (!domain.selected?.visible) {
       // uh oh
       domain.selected = null
+      window.dispatchEvent(new CustomEvent("on deselected"))
     }
 
     if (o.isSymIndicator) {
@@ -107,8 +111,16 @@ export class SymmetricObject extends VisObject {
       if (domain.selected) {
         // Unselect
         domain.selected = null
+        window.dispatchEvent(new CustomEvent("on deselected"))
       } else {
         domain.selected = o
+        if (o instanceof ReflectivePlaneObject) {
+          window.dispatchEvent(new CustomEvent("on plane selected", {detail:o}))
+        }
+        else if (o instanceof AxisObject) {
+          const rotateOptions = [90, 180, 270] //todo: test data, change this based on stuff
+          window.dispatchEvent(new CustomEvent("on axis selected", {detail:rotateOptions}))
+        }
       }
     }
 
@@ -155,6 +167,9 @@ export class SymmetricObject extends VisObject {
       }
 
       this.planeObjects.forEach(o => this.add(o))
+    }
+    else {
+      window.dispatchEvent(new CustomEvent("on deselected"))
     }
   }
 }

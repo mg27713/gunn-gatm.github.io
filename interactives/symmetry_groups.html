@@ -21,9 +21,32 @@
         <label for="allow-3d">Allow 3D rotation</label>
         <input type="checkbox" id="allow-3d" />
     </div>
-</div>
-</div>
+    <div class="checkbox">
+        <label for="show-axes">Show axes</label>
+        <input oninput="symObject.showAxisObjects(this.checked)" type="checkbox" id="show-axes" />
+    </div>
+    <div class="checkbox">
+        <label  for="show-planes">Show planes</label>
+        <input oninput="symObject.showPlaneObjects(this.checked)" type="checkbox" id="show-planes" />
+    </div>
+    <button onclick="console.log('reflect code here')" id="reflect" class="smol-button hidden">Reflect</button>
+    <div id="rotate-container" style="display: flex; flex-direction: row;gap:1rem;justify-content: space-between;">
 
+    </div>
+</div>
+</div>
+<style>
+    .smol-button {
+        background: #3366cc;
+        color: white
+    }
+    #rotate-container .smol-button:first-child{
+        margin-left: auto;
+    }
+    #rotate-container .smol-button:last-child{
+        margin-right: auto;
+    }
+</style>
 <script src="symmetry_groups.js" type="module"></script>
 </body>
 </html>
