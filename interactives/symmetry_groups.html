@@ -9,19 +9,69 @@
 <body>
 
 <div class="symmetry-groups-wrapper">
+  
 <div id="main-surface"></div>
 <div class="sidebar">
     <h1>Symmetry Groups</h1>
 
     <div id="miniature"></div>
     <div class="items" id="items"></div>
+  
+        <div class="group-selectors" id="group-selectors"></div>
+        <div class="checkbox">
+            <label for="allow-3d">Allow 3D rotation</label>
+            <input type="checkbox" id="allow-3d"/>
+        </div>
+        <div style="display:flex;flex-direction: column">
+            <div>
+                <button style="margin-top:1rem; background: #3366cc;color:white;display: flex" class="giant-button">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         style="width: 2rem;height: 2rem;margin-top:auto;margin-bottom: auto;margin-right: 0.5rem"
+                         viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"/>
+                    </svg>
+                    Reflect
+                </button>
+            </div>
+            <div style="display: flex;flex-direction: row;justify-content: space-between;gap:1rem">
+                <button style="margin-top:1rem; background: #3366cc;color:white;margin-left: auto;display: flex"
+                        class="smol-button">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         style="width: 1rem;height: 1rem;margin-top:auto;margin-bottom: auto;margin-right: 0.5rem"
+                         viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                              clip-rule="evenodd"/>
+                    </svg>
+                    Rotate 120˚
+                </button>
+                <button style="margin-top:1rem; background: #3366cc;color:white;margin-right: auto;display: flex"
+                        class="smol-button">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         style="width: 1rem;height: 1rem;margin-top:auto;margin-bottom: auto;margin-right: 0.5rem"
+                         viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                              clip-rule="evenodd"/>
+                    </svg>
+                    Rotate 240˚
+                </button>
+            </div>
+            <div style="display: flex;flex-direction: row;justify-content: space-between;gap:1rem">
+                <div style="display: flex"><label for="shape-select" style="margin: auto 1rem auto auto;">Shape:</label></div>
 
-    <div class="group-selectors" id="group-selectors"></div>
-    <div class="checkbox">
-        <label for="allow-3d">Allow 3D rotation</label>
-        <input type="checkbox" id="allow-3d" />
+                <select style="margin-top:1rem; background: #3366cc;color:white;display: flex;margin-right: auto;" id="shape-select"
+                        class="smol-button">
+                    <option>Rectangle</option>
+                    <option>Square</option>
+                    <option>Equilateral Triangle</option>
+                    <option>Square Prism</option>
+                    <option>Cube</option>
+                    <option>Regular Pentagon</option>
+                </select>
+            </div>
+        </div>
     </div>
-</div>
 </div>
 
 <script src="symmetry_groups.js" type="module"></script>
