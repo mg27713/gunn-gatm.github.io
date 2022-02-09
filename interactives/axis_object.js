@@ -128,6 +128,10 @@ class AxisObject extends VisObject {
       this.add(new VisObject({ geometry: ssGeometry, material: this.material } ))
     }
   }
+
+  castratedClone () {
+    return this.visible ? new AxisObject(this) : null
+  }
 }
 
 export { AxisObject }

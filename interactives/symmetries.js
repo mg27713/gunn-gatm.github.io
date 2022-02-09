@@ -24,6 +24,7 @@ export class SymmetricShape {
     this.name = params.name
     this.dimensions = params.dimensions // should be 2 or 3
     this.vertices = params.vertices // vertices centered around (0, 0, 0)
+    this.vertexNames = params.vertexNames
 
     this.normalizeVertexDimensions()
 
@@ -506,6 +507,11 @@ export const SHAPES = {
       0xff0000, 0xff0000, 0xff0000, 0xff0000,
       0x00ff00, 0x00ff00, 0x00ff00, 0x00ff00,
       0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
+    ],
+    vertexNames: [
+      '1', '2', '3', '4', "1'", "2'", "3'", "4'"
     ]
   })
 }
+
+Object.assign(window, { SHAPES })

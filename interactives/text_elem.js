@@ -29,8 +29,6 @@ class VisText extends VisObject {
       v.project(camera)
 
       v = this.domain.drawToDOMCoords(v)
-
-      // ASSUMES CANVAS IS ALIGNED TO TOP LEFT OF SCREEN
       let adjust = this.adjust
 
       let x = v.x + adjust.x

@@ -104,6 +104,10 @@ class ReflectivePlaneObject extends VisObject {
     this.geometry !== nullGeometry ? this.geometry.dispose : "空"
     this.geometry = new ConvexGeometry(verts)
   }
+
+  castratedClone () {
+    return this.visible ? new ReflectivePlaneObject(this) : null
+  }
 }
 
 export { ReflectivePlaneObject }

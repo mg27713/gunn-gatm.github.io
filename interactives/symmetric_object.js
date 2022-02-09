@@ -1,9 +1,10 @@
 import * as THREE from "../external/three.module.js"
-import {Color, Float32BufferAttribute, MeshLambertMaterial} from "../external/three.module.js"
+import {Color, Float32BufferAttribute, Group, MeshLambertMaterial, Vector3} from "../external/three.module.js"
 import {AxisObject} from "./axis_object.js"
 import {VisObject} from "./vis_object.js"
 import {ReflectivePlaneObject} from "./reflective_plane_object.js"
 import {nullGeometry, nullMaterial} from "./null.js"
+import {VisText} from "./text_elem.js"
 
 const generalMaterial = new THREE.MeshBasicMaterial ({ vertexColors: true })
 const triangleMaterial = new MeshLambertMaterial()
@@ -12,9 +13,11 @@ export class SymmetricObject extends VisObject {
   constructor (params={}) {
     super({ geometry: nullGeometry, clickable: false, material: nullMaterial })
 
-    this.position.set(0, 0, 0)
+    this.position.copy(params.position ?? new Vector3(0, 0, 0))
 
     this.inMotion = false
+    this.showVertexLabels = params.showVertexLabels ?? true
+
     let shape = this.shape = params.shape
     if (!shape) throw new Error("fuck you")
 
@@ -29,8 +32,9 @@ export class SymmetricObject extends VisObject {
     this.displayed = null
     this.computeDisplayed()
 
-    this.axisObjects = []
-    this.planeObjects = []
+    // Removes invisible stuff
+    this.axisObjects = params.axisObjects?.map(a => a.castratedClone()).filter(a => !!a) ?? []
+    this.planeObjects = params.planeObjects?.map(a => a.castratedClone()).filter(a => !!a) ?? []
   }
 
   computeDisplayed () {
@@ -51,9 +55,19 @@ export class SymmetricObject extends VisObject {
     }
 
     geometry.computeVertexNormals()
-    this.displayed = new VisObject({
+    this.displayed = new VisObject() // just a group
+
+    this.displayed.add(new VisObject({ // the geometry itself
       geometry, material, clickable: true /* we don't have handlers, but we need its corpulent mass */
-    })
+    }))
+
+    if (this.showVertexLabels) {
+      console.log("computing vertex labels")
+      let v = shape.vertices
+      let vL = shape.vertexNames
+
+      v.forEach((p, i) => this.displayed.add(new VisText({ text: vL[i], position: p })))
+    }
 
     this.add(this.displayed)
   }
@@ -99,6 +113,10 @@ export class SymmetricObject extends VisObject {
     }
 
     this.restoreMaterials()
+  }
+
+  castratedClone () {
+    return new SymmetricObject(this)
   }
 
   restoreMaterials () {

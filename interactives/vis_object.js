@@ -67,6 +67,7 @@ class VisObject extends Mesh {
 
   remove (...args) {
     super.remove(...args)
+    args.forEach(a => a.clickable = false)
     this.setDomain(null)
   }
 

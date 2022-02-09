@@ -41,7 +41,6 @@ class VisDomain {
     this.defaultCameraPosition = params.defaultCameraPosition ?? new Vector3(1, 1, 1)
     this.renderer.setPixelRatio(window.devicePixelRatio)
 
-
     // Parent element in DOM
     this.parentElement = null
     this.drawingSurface = this.renderer.domElement

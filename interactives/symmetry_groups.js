@@ -78,6 +78,9 @@ function render () {
 let symObject = new SymmetricObject({ shape: SHAPES.cube })
 miniatureDomain.scene.add(symObject)
 
+let newSymObject = symObject.castratedClone()
+mainDomain.scene.add(newSymObject)
+
 setStyleDefaults()
 render()
 
