@@ -138,7 +138,10 @@ h2 {
     overflow-y: hidden;
 }
 
-#drawing-surface {
+#main-surface {
+    position: absolute;
+    left: 0;
+    top: 0;
     height: 100%;
     width: calc(100% - 500px);
 }
@@ -180,4 +183,10 @@ h2 {
 .y-arrow {
     stroke: green;
     marker-end: url(#y-arrow);
+}
+
+#miniature {
+    margin: auto 0;
+    height: 350px;
+    position: relative;
 }

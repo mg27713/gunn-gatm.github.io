@@ -1795,7 +1795,6 @@ var OrbitControls = function ( object, domElement ) {
 
   // this method is exposed, but perhaps it would be better if we can make it private...
   this.update = function () {
-
     var offset = new Vector3();
 
     // so camera.up is the orbit axis
@@ -2493,7 +2492,7 @@ var OrbitControls = function ( object, domElement ) {
   function onMouseDown( event ) {
 
     // Prevent the browser from scrolling.
-    event.preventDefault();
+    //event.preventDefault();
 
     // Manually set the focus since calling preventDefault above
     // prevents the browser from setting it automatically.
@@ -2602,7 +2601,7 @@ var OrbitControls = function ( object, domElement ) {
 
     if ( scope.enabled === false ) return;
 
-    event.preventDefault();
+    //event.preventDefault();
 
     switch ( state ) {
 
@@ -2834,8 +2833,6 @@ var OrbitControls = function ( object, domElement ) {
     event.preventDefault();
 
   }
-
-  //
 
   scope.domElement.addEventListener( 'contextmenu', onContextMenu, false );
 
