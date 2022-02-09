@@ -28,7 +28,6 @@ class VisScene extends Scene {
 
   remove (...args) {
     super.remove(...args)
-    this.setDomain(null)
   }
 }
 
@@ -156,6 +155,7 @@ class VisDomain {
     this.drawingSurface.addEventListener("mousemove", e => this.onMouseMove(e), false)
     this.drawingSurface.addEventListener("mousedown", e => this.onMouseDown(e), false)
     this.drawingSurface.addEventListener("mouseup", e => this.onMouseUp(e), false)
+    this.drawingSurface.addEventListener("click", e => this.onClick(e), false)
   }
 
   onMouseMove (event) {
@@ -212,6 +212,12 @@ class VisDomain {
     }
 
     return on
+  }
+
+  onClick (e) {
+    if (this.hovering) {
+      this.hovering.triggerEvent?.("click")
+    }
   }
 
   onMouseUp () {

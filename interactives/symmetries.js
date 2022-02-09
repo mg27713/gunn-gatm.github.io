@@ -155,8 +155,14 @@ export function explainMatrix (mat4) {
 
   if (closeEnough(theta, 2 * Math.PI) || closeEnough(theta, 2 * Math.PI)) theta = 0
   if (closeEnough(s.x, 1) && closeEnough(s.y, 1) && closeEnough(s.z, 1)) {
-    // Pure rotation, def not reflection
-    return [ { type: "rotation", axis, theta, m: mat4 } ]
+    // Pure rotation, def not reflection, tries to turn it into a clockwise rotation if >180
+    let ccw = true
+    if (theta > Math.PI) {
+      ccw = false
+      theta = Math.PI - theta
+    }
+
+    return [ { type: "rotation", axis, theta, m: mat4, ccw } ]
   }
 
   // If it's a reflection with unit normal <a, b, c>... see
@@ -475,7 +481,8 @@ export const SHAPES = {
     generators: [
       new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
       new Matrix4().makeScale(1, 1, -1) // single reflection to make it a dihedral group
-    ]
+    ],
+    vertexNames: [ '1', '', '3', '', '2' ]
   }),
   triangularPrism: new SymmetricShape({
     name: "equilateral triangular prism",

@@ -188,4 +188,5 @@ h2 {
 #miniature {
     margin: auto 0;
     height: 350px;
+    position: relative;
 }

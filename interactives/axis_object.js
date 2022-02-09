@@ -11,14 +11,15 @@ class AxisObject extends VisObject {
   constructor (params={}) {
     super({ geometry: nullGeometry, material: axisMaterial, ...params })
 
-    this.normal = params.normal ?? new Vector3()
+    this.normal = params.normal.clone() ?? new Vector3()
     this.axisLen = params.axisLen ?? 1
     this.girth = params.girth ?? 0.04
 
-    this.littleGirth = params.littleGirth ?? 0.02
+    this.littleGirth = params.littleGirth ?? 0.05
     this.subtends = params.subtends ?? 0 //Math.PI / 2
     this.subtendsShift = params.subtendsShift ?? 0.1
     this.subtendsRadius = params.subtendsRadius ?? 0.5
+    this.ccw = params.ccw ?? true
 
     this.computeChildren()
     this.addVisEventListener("hover", () => {
@@ -103,19 +104,19 @@ class AxisObject extends VisObject {
       let s = this.subtends, ss = this.subtendsShift /* from tip */, al = this.axisLen, girth = this.littleGirth, r = this.subtendsRadius
 
       let m = e.clone().add(this.normal.normalize().multiplyScalar(-ss)) // center of the subtends thingy
-      let [ bp, bq ] = getCylinderBasis(n, r)
-
-      if (s < 0) {
-        s = s + 2 * Math.PI
-      }
+      let [ bp, bq ] = getCylinderBasis(n, r, true)
 
       let verts = []
-      let res = Math.ceil(s / Math.PI * 48)
+      let res = Math.ceil(Math.abs(s) / Math.PI * 48)
 
-      for (let i = 0; i < res; ++i) {
+      for (let i = res - 1; i >= 0; --i) {
         let f = i / res * s
 
         verts.push(m.clone().add(bp.clone().multiplyScalar(Math.cos(f)).add(bq.clone().multiplyScalar(Math.sin(f)))))
+      }
+
+      if (s < 0) {
+        verts.reverse()
       }
 
       let ssGeometry = generateArrow(verts, {
