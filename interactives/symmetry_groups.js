@@ -37,7 +37,8 @@ let DOMList = {
   groupSelectors: "group-selectors",
   items: "items",
   allow3DRotation: "allow-3d",
-  miniature: "miniature"
+  miniature: "miniature",
+
 }
 
 // Retrieve elements
@@ -242,6 +243,45 @@ function demonstrateCongaLine () {
 
 setStyleDefaults()
 render()
+
+function toggleReflectButton(v){
+    document.getElementById('reflect').classList.toggle('hidden', v)
+}
+
+function clearRotateButtons(){
+    const el = document.getElementById('rotate-container');
+    el.innerHTML = null
+}
+
+function createRotateButtons(...degrees){
+    const el = document.getElementById('rotate-container');
+    clearRotateButtons()
+    const nodes = degrees.map((n)=>{
+      const btn = document.createElement('button');
+      btn.className = 'smol-button';
+      btn.addEventListener('click', ()=>{
+        window.dispatchEvent(new CustomEvent("on rotate", {detail: n}))
+      })
+      btn.innerText = n
+      return btn
+    })
+    nodes.forEach((node)=>{
+      el.appendChild(node)
+    })
+}
+
+window.addEventListener("on deselected", ()=>{
+    clearRotateButtons()
+    toggleReflectButton(true)
+})
+
+window.addEventListener("on plane selected", ()=>{toggleReflectButton(false)})
+
+window.addEventListener("on axis selected", (e)=>{createRotateButtons(...e.detail)})
+
+window.addEventListener("on rotate", (e)=>{
+    console.log("Rotate the object by ", e.detail, " degrees")
+})
 
 resetAll()
 

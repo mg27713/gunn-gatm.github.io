@@ -190,3 +190,7 @@ h2 {
     height: 350px;
     position: relative;
 }
+
+.hidden {
+    display: none;
+}
