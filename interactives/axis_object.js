@@ -13,9 +13,9 @@ class AxisObject extends VisObject {
 
     this.normal = params.normal.clone() ?? new Vector3()
     this.axisLen = params.axisLen ?? 1
-    this.girth = params.girth ?? 0.04
+    this.girth = params.girth ?? 0.03
 
-    this.littleGirth = params.littleGirth ?? 0.05
+    this.littleGirth = params.littleGirth ?? 0.03
     this.subtends = params.subtends ?? 0 //Math.PI / 2
     this.subtendsShift = params.subtendsShift ?? 0.1
     this.subtendsRadius = params.subtendsRadius ?? 0.5

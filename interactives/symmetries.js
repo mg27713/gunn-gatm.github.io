@@ -37,7 +37,6 @@ export class SymmetricShape {
     this.reflectiveNormals = group.getReflectiveNormals() // normals of reflective planes this shape is symmetrical in
 
     this.axisNames = []
-    this.rNormNames = []
 
     this.faceColors = params.faceColors ?? null
     this.geometry = params.geometry ?? new ConvexGeometry(this.vertices)
@@ -63,8 +62,6 @@ export class SymmetricShape {
         let eq
         if (eq = closelyEquilinear(a, axisNormal)) {
           let theta = m[0].theta
-          console.log(theta)
-          console.log(m, e, e.toMatrix(this))
 
           if (eq === -1) {
             theta = -theta // axis is dumb
@@ -181,8 +178,6 @@ export function explainMatrix (mat4) {
   let k = Math.sqrt(1 - q.w * q.w)
   if (k < 1e-6) k = 1
 
-  console.log(k, q)
-
   let axis = new Vector3(q.x / k, q.y / k, q.z / k)
   let theta = 2 * Math.acos(q.w)
 
@@ -274,7 +269,7 @@ function computeSymmetryGroup(shape, generators=[]) {
 
   do {
     prevLen = elems.length
-    if (prevLen > 100) throw new Error("FJIWF:OLIWEJF:OWIJEF")
+    if (prevLen > 240) throw new Error("FJIWF:OLIWEJF:OWIJEF")
 
     for (let i = 0; i < prevLen; ++i) {
       let m1 = elems[i]
@@ -393,8 +388,8 @@ export function fattenPolygon (vertices, thickness=0.5) {
   return vertices.flatMap(v => [ new Vector3(v.x, -thickness, v.y), new Vector3(v.x, thickness, v.y) ])
 }
 
-function generateSkinnyPolygon(n) {
-  return fattenPolygon(generateRegularPolygon(n), 0.1)
+function generateSkinnyPolygon(n, cr=1, rot=0) {
+  return fattenPolygon(generateRegularPolygon(n, cr, rot), 0.1)
 }
 
 let cs = x => x >= 0 ? 1 : -1
@@ -510,6 +505,8 @@ export function generateArrow (verts, { res=16, showCone = true, shaftGirth = 0.
   return geo
 }
 
+let gr = (1 + Math.sqrt(5)) / 2
+
 export const SHAPES = {
   triangle: new SymmetricShape({
     name: "Equilateral triangle",
@@ -524,13 +521,42 @@ export const SHAPES = {
   square: new SymmetricShape({
     name: "Square",
     dimensions: 2,
-    vertices: generateSkinnyPolygon(3),
-    rNormNames: [ 'A', 'B', 'C' ],
+    vertices: generateSkinnyPolygon(4, 1, Math.PI / 4), // axis aligned square
     generators: [
-      new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
+      new Matrix4().makeRotationY(Math.PI / 2), // single rotation of 90°
       new Matrix4().makeScale(1, 1, -1) // single reflection to make it a dihedral group
     ],
-    vertexNames: [ '1', '', '3', '', '2' ]
+    vertexNames: [ '4', '', '1', '', '3', '', '2' ]
+  }),
+  pentagon: new SymmetricShape({
+    name: "Equilateral pentagon",
+    dimensions: 2,
+    vertices: generateSkinnyPolygon(5),
+    generators: [
+      new Matrix4().makeRotationY(2 * Math.PI / 5), // single rotation of 72°
+      new Matrix4().makeScale(1, 1, -1) // single reflection to make it a dihedral group
+    ],
+    vertexNames: [ '1', '', '5', '', '4', '', '3', '', '2' ]
+  }),
+  hexagon: new SymmetricShape({
+    name: "Equilateral hexagon",
+    dimensions: 2,
+    vertices: generateSkinnyPolygon(6),
+    generators: [
+      new Matrix4().makeRotationY(Math.PI / 3), // single rotation of 60°
+      new Matrix4().makeScale(1, 1, -1) // single reflection to make it a dihedral group
+    ],
+    vertexNames: [ '1', '', '6', '', '5', '', '4', '', '3', '', '2' ]
+  }),
+  rectangle: new SymmetricShape({
+    name: "Rectangle",
+    dimensions: 2,
+    vertices: fattenPolygon([[0.9, 0.5], [0.9, -0.5], [-0.9, -0.5], [-0.9, 0.5]].map(([x, y]) => new Vector2(x, y)), 0.1), // axis aligned square
+    generators: [
+      new Matrix4().makeScale(1, 1, -1),
+      new Matrix4().makeScale(-1, 1, 1)
+    ],
+    vertexNames: [ '4', '', '1', '', '2', '', '3' ]
   }),
   triangularPrism: new SymmetricShape({
     name: "Triangular prism",
@@ -543,14 +569,112 @@ export const SHAPES = {
     ],
     vertexNames: [ '1\'', '1', '3\'', '3', '2\'', '2' ],
     faceColors: [
-      0x0000ff, 0x0000ff, 0x0000ff,
-      0xff0000, 0xff0000, 0xff0000,
-      0xdddddd, 0xdddddd, 0xdddddd,
-      0x00ff00, 0x00ff00, 0x00ff00,
-      0x0000ff, 0x0000ff, 0x0000ff,
+      0x0000ff, 0x0000ff, 0x0000ff, // side 1 p 1
+      0xff0000, 0xff0000, 0xff0000, // side 2 p 1
+      0xdddddd, 0xdddddd, 0xdddddd, // top face
+      0x00ff00, 0x00ff00, 0x00ff00, // side 3 p 1
+      0x0000ff, 0x0000ff, 0x0000ff, // side 1 p 2
+      0x222222, 0x222222, 0x222222, // bottom face
+      0x00ff00, 0x00ff00, 0x00ff00, // side 3 p 2
+      0xff0000, 0xff0000, 0xff0000, // side 2 p 2
+    ]
+  }),
+  squarePrism: new SymmetricShape({
+    name: "Square prism",
+    dimensions: 3,
+    vertices: fattenPolygon(generateRegularPolygon(4, 0.7, Math.PI / 4), 1.3),
+    generators: [
+      new Matrix4().makeRotationY(Math.PI / 2), // single rotation of 90°
+      new Matrix4().makeScale(1, 1, -1), // dihedral
+      new Matrix4().makeScale(1, -1, 1) // prism
+    ],
+    vertexNames: [ '1\'', '1', '4\'', '4', '3\'', '3', '2\'', '2' ],
+    faceColors: [
+      0x0000ff, 0x0000ff, 0x0000ff, // side 1 p 1
       0x222222, 0x222222, 0x222222,
+      0xff8800, 0xff8800, 0xff8800,
+      0xff0000, 0xff0000, 0xff0000,
+      0x00ff00, 0x00ff00, 0x00ff00,
+      0xdddddd, 0xdddddd, 0xdddddd,
+      0xdddddd, 0xdddddd, 0xdddddd,
+      0xff8800, 0xff8800, 0xff8800,
+      0x0000ff, 0x0000ff, 0x0000ff,
       0x00ff00, 0x00ff00, 0x00ff00,
       0xff0000, 0xff0000, 0xff0000,
+      0x222222, 0x222222, 0x222222,
+    ]
+  }),
+  squarePyramid: new SymmetricShape({
+    name: "Square pyramid",
+    dimensions: 3,
+    vertices: [
+      [-1, -1, -1],
+      [-1, -1, 1],
+      [1, -1, 1],
+      [1, -1, -1],
+      [0, 1, 0]
+    ].map(([x, y, z]) => new Vector3(x, y, z).multiplyScalar(0.7)),
+    generators: [
+      new Matrix4().makeRotationY(Math.PI / 2), // single rotation of 90°
+      new Matrix4().makeScale(1, 1, -1) // dihedral
+    ],
+    vertexNames: [ '2', '3', '4', '1' ],
+    faceColors: [
+      0xff0000, 0xff0000, 0xff0000,
+      0x222222, 0x222222, 0x222222,
+      0xff8800, 0xff8800, 0xff8800,
+      0xff0000, 0xff0000, 0xff0000,
+      0x00ff00, 0x00ff00, 0x00ff00,
+      0xdddddd, 0xdddddd, 0xdddddd,
+    ]
+  }),
+  pentagonalPrism: new SymmetricShape({
+    name: "Pentagonal prism",
+    dimensions: 3,
+    vertices: fattenPolygon(generateRegularPolygon(5, 0.7), 1.3),
+    generators: [
+      new Matrix4().makeRotationY(2 * Math.PI / 5), // single rotation of 72°
+      new Matrix4().makeScale(1, 1, -1), // dihedral
+      new Matrix4().makeScale(1, -1, 1) // prism
+    ],
+    vertexNames: [ '1\'', '1', '5\'', '5', '4\'', '4', '3\'', '3', '2\'', '2' ],
+    faceColors: [
+      0x0000ff, 0x0000ff, 0x0000ff,
+      0xff8800, 0xff8800, 0xff8800,
+      0x222222, 0x222222, 0x222222,
+      0xff8800, 0xff8800, 0xff8800,
+      0xdddddd, 0xdddddd, 0xdddddd,
+      0x00ffff, 0x00ffff, 0x00ffff,
+      0x222222, 0x222222, 0x222222,
+      0xdddddd, 0xdddddd, 0xdddddd,
+      0x0000ff, 0x0000ff, 0x0000ff,
+      0xff0000, 0xff0000, 0xff0000,
+      0x00ff00, 0x00ff00, 0x00ff00,
+      0x222222, 0x222222, 0x222222,
+      0x00ffff, 0x00ffff, 0x00ffff,
+      0xdddddd, 0xdddddd, 0xdddddd,
+      0xff0000, 0xff0000, 0xff0000,
+      0x00ff00, 0x00ff00, 0x00ff00
+    ]
+  }),
+  tetrahedron: new SymmetricShape({
+    name: "Regular tetrahedron",
+    dimensions: 3,
+    vertices: [
+      [1, 0, -Math.SQRT1_2], [-1, 0, -Math.SQRT1_2],
+      [0, 1, Math.SQRT1_2], [0, -1, Math.SQRT1_2]
+    ].map(([x, y, z]) => new Vector3(x, y, z).multiplyScalar(0.7)),
+    generators: [
+      new Matrix4().makeRotationZ(Math.PI),
+      new Matrix4().makeScale(1, -1, 1),
+      new Matrix4().setRotationFromQuaternion(new Quaternion().setFromAxisAngle(new Vector3(1, 0, -Math.SQRT1_2).normalize(), 2 * Math.PI / 3))
+    ],
+    vertexNames: [ '1', '2', '3', '4' ],
+    faceColors: [
+      0x0000ff, 0x0000ff, 0x0000ff,
+      0xff8800, 0xff8800, 0xff8800,
+      0x222222, 0x222222, 0x222222,
+      0x00ff00, 0x00ff00, 0x00ff00
     ]
   }),
   cube: new SymmetricShape({
@@ -576,6 +700,23 @@ export const SHAPES = {
     vertexNames: [
       '3', '2', '4', '1', "2'", "3'", "1'", "4'"
     ]
+  }),
+  icosahedron: new SymmetricShape({
+    name: "ICOSAHEDRON",
+    dimensions: 3,
+    vertices: [
+      [0, 1, gr], [0, 1, -gr], [1, gr, 0], [0, -1, -gr], [0, -1, gr],
+      [1, -gr, 0], [-1, -gr, 0], [-1, gr, 0],
+      [gr, 0, 1], [-gr, 0, 1], [-gr, 0, -1], [gr, 0, -1]
+    ].map(([x, y, z]) => new Vector3(x, y, z).multiplyScalar(0.4)),
+    generators: [
+      new Matrix4().makeScale(1, 1, -1),
+      new Matrix4().makeScale(-1, 1, 1),
+      new Matrix4()
+        .setRotationFromQuaternion(new Quaternion()
+          .setFromAxisAngle(new Vector3(gr, 0, 1).normalize(), 2 * Math.PI / 5))
+    ],
+    vertexNames: [...new Array(12).keys()].map(s => (s + 1) + '')
   })
 }
 

@@ -68,7 +68,6 @@ export class SymmetricObject extends VisObject {
 
       if (this.displayed) {
         this.displayed.matrix.copy(this.currentTransform)
-        console.log(this.displayed.matrix)
       }
 
       this.inMotion = false
