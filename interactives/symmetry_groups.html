@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Symmetry Groups</title>
+
+    <link rel="stylesheet" href="snaps.css">
+</head>
+<body>
+
+<div class="symmetry-groups-wrapper">
+
+    <div id="main-surface"></div>
+    <div class="sidebar">
+        <h1>Symmetry Groups</h1>
+
+        <div style="display:flex;flex-direction: column">
+            <div style="display: flex;flex-direction: row;justify-content: space-between;gap:1rem">
+                <div style="display: flex"><label for="shape-select" style="margin: auto 1rem auto auto;">Shape:</label>
+                </div>
+
+                <select style="margin-top:1rem; background: #3366cc;color:white;display: flex;margin-right: auto;"
+                        id="shape-select"
+                        class="smol-button">
+                    <option>Equilateral triangle</option>
+                    <option>Square</option>
+                    <option>Rectangle</option>
+                    <option>Equilateral pentagon</option>
+                    <option>Equilateral hexagon</option>
+                    <option>Triangular prism</option>
+                    <option>Square prism</option>
+                    <option>Pentagonal prism</option>
+                    <option>Square pyramid</option>
+                    <option>Cube</option>
+                    <option>Regular tetrahedron</option>
+                    <option>ICOSAHEDRON</option>
+                    <!-- <option>Regular Pentagon</option> -->
+                </select>
+            </div>
+        </div>
+
+        <div id="miniature"></div>
+        <div class="items" id="items"></div>
+
+        <h2>Main view</h2>
+        <br>
+        <br>
+
+        <div class="action-container">
+        <button onclick="doSelectedAction()" id="reflect" class="smol-button hidden">Reflect</button>
+        </div>
+        <div id="rotate-container" class="action-container"></div>
+
+        <div class="group-selectors" id="group-selectors"></div>
+
+        <button onclick="showNetMovement()" class="smol-button">Show net transformation</button>
+        <button onclick="resetStuff()" class="smol-button">Reset</button>
+
+        <div class="checkbox">
+            <label for="allow-3d">Allow 3D rotation</label>
+            <input type="checkbox" id="allow-3d" checked/>
+        </div>
+        <div class="checkbox">
+            <label for="show-axes">Show axes</label>
+            <input oninput="showAxes(this.checked)" type="checkbox" id="show-axes" checked/>
+        </div>
+        <div class="checkbox">
+            <label for="show-planes">Show planes</label>
+            <input oninput="showPlanes(this.checked)" type="checkbox" id="show-planes" checked/>
+        </div>
+        <div class="checkbox">
+            <label for="show-planes">Animation speed</label>
+            <input oninput="setAnimSpeed(this.value)" type="range" min="100" max="1500"/>
+        </div>
+    </div>
+</div>
+
+<style>
+    .smol-button {
+        background: #3366cc;
+        color: white
+    }
+
+    #rotate-container .smol-button:first-child {
+        margin-left: auto;
+    }
+
+    #rotate-container .smol-button:last-child {
+        margin-right: auto;
+    }
+</style>
+
+<script src="symmetry_groups.js" type="module"></script>
+</body>
+</html>

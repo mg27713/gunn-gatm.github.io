@@ -44,7 +44,7 @@ body.dark {
     background-color: var(--sidebar);
 }
 
-h1 {
+h1, h2 {
     text-align: center;
     margin-bottom: 0.75rem;
 }
@@ -84,7 +84,7 @@ button {
     margin-right: 20px;
 }
 
-#giant-button {
+#giant-button, .giant-button {
     font-size: 2rem;
     font-weight: bold;
     padding: 1rem;
@@ -96,7 +96,7 @@ button {
     transition: all 100ms;
 }
 
-#giant-button:hover {
+#giant-button:hover, .giant-button:hover {
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
@@ -131,4 +131,70 @@ h2 {
     fill: var(--post-fill);
     stroke: var(--string-color);
     stroke-width: 3;
+}
+
+.symmetry-groups-wrapper, body {
+    overflow-x: hidden;
+    overflow-y: hidden;
+}
+
+#main-surface {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: calc(100% - 500px);
+}
+
+.text-svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.text-svg > *, .text-svg {
+    pointer-events: none;
+}
+
+.text-label {
+    font-size: 30px;
+    text-anchor: middle;
+}
+
+.text-shadow {
+    paint-order: stroke;
+    stroke: white;
+    fill: white;
+    stroke-width: 4px;
+    stroke-linecap: butt;
+    stroke-linejoin: miter;
+}
+
+.widget-arrow {
+    fill: none;
+    stroke-width: 2;
+}
+
+.x-arrow {
+    stroke: red;
+    marker-end: url(#x-arrow);
+}
+
+.y-arrow {
+    stroke: green;
+    marker-end: url(#y-arrow);
+}
+
+#miniature {
+    margin: auto 0;
+    height: 350px;
+    position: relative;
+}
+
+.hidden {
+    display: none;
+}
+
+.action-container {
+    display: flex; flex-direction: row;gap:1rem;justify-content: space-between;
 }

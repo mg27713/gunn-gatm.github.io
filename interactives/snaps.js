@@ -1,3 +1,7 @@
+import { VisComponent, Vector2, VisGroup, SnapVisualization } from './common.js'
+
+Object.assign(window, { VisComponent, Vector2, VisGroup })
+
 // Identity is [ 0, 1, 2 ], etc.
 let textbookNaming = {
     'I': [ 0, 1, 2 ],
@@ -69,67 +73,6 @@ function invertElement(e) {
     return ret
 }
 
-class Vector2 {
-    constructor(x, y) {
-        this.x = x
-        this.y = y
-    }
-
-    eq(v) {
-        return v && (this.x === v.x && this.y === v.y)
-    }
-
-    clone() {
-        return new Vector2(this.x, this.y)
-    }
-
-    // Try to convert anything to a vec2
-    static fromObj(o) {
-        let x = 0, y = 0
-        if (Array.isArray(o)) {
-            x = o[0]
-            y = o[1]
-        } else if (o.x !== undefined) {
-            x = o.x
-            y = o.y
-        }
-
-        return new Vector2(+x, +y)
-    }
-}
-
-// Returns a string between -2 billion and 2 billion
-function getUUID() {
-    return ((Math.random() * (2 ** 32)) | 0) + ""
-}
-
-class VisComponent {
-    constructor() {
-        this.domElement = null
-        this.id = getUUID()
-
-        this.init()
-        this.setDOMID()
-    }
-
-    init() {
-
-    }
-
-    setDOMID() {
-        if (this.domElement)
-            this.domElement.id = this.id
-    }
-
-    update() {
-        this._update()
-    }
-
-    _update() {
-
-    }
-}
-
 class CircleComponent extends VisComponent {
   constructor () {
     super()
@@ -137,22 +80,17 @@ class CircleComponent extends VisComponent {
     this.x = 50
     this.y = 50
     this.r = 40
-    // Unused
-    this.fill = "red"
-    this.stroke = "black"
-    this.strokeWidth = 3
   }
 
   init () {
     this.domElement = document.createElementNS("http://www.w3.org/2000/svg", "circle")
+      this.addClass("snap-post")
   }
 
   _update () {
     this.domElement.setAttribute("cx", this.x)
     this.domElement.setAttribute("cy", this.y)
     this.domElement.setAttribute("r", this.r)
-
-    this.domElement.classList.add("snap-post")
 
     // this.domElement.setAttribute("fill", this.fill)
     // this.domElement.setAttribute("stroke", this.stroke)
@@ -168,54 +106,6 @@ let stringRes = 20
 let doBoing = true
 
 const DEFAULT_HEIGHT = 100
-
-class VisGroup extends VisComponent {
-    constructor() {
-        super()
-
-        this.children = []
-    }
-
-    addChild(child) {
-        if (!(child instanceof VisComponent))
-            throw new TypeError("Child must be a VisComponent")
-        this.removeChild(child)
-
-        this.children.push(child)
-    }
-
-    update() {
-        this._update()
-
-        for (let child of this.children) {
-            child.update()
-        }
-    }
-
-    removeChild(child) {
-        let index = this.children.indexOf(child)
-        if (index === -1) return
-        this.children.splice(index, 1)
-    }
-
-    getFlattenedComponents() {
-        let components = []
-
-        for (let child of this.children) {
-            if (child instanceof VisGroup) {
-                components = components.concat(child.getFlattenedComponents())
-            } else {
-                components.push(child)
-            }
-        }
-
-        return components
-    }
-
-    removeChildren() {
-        this.children = []
-    }
-}
 
 function removeDuplicateVertices(v) {
     if (v.length === 0) return v
@@ -509,10 +399,13 @@ class StringComponent extends VisComponent {
             // Immediately move fixed points to target for now
             if (doBoing) this.fixedMovementProportion = 1
         }
+
+        this.needsUpdate = true
     }
 
     init() {
         this.domElement = document.createElementNS("http://www.w3.org/2000/svg", "polyline")
+       this.addClass("snap-string")
     }
 
     // One "tick" of the rubber band movement. Returns the number of simulated seconds completed
@@ -647,10 +540,13 @@ class StringComponent extends VisComponent {
 
     _update() {
         // Note that performance.now() returns a timestamp in milliseconds (to roughly 0.1 ms in Chrome, lower in FF)
-        let timeSince = (performance.now() - this.lastTick) / 1000
-        let accumTime = 0, ticks = 0
+        if (this.inMotion) {
+            let timeSince = (performance.now() - this.lastTick) / 1000
+            let accumTime = 0, ticks = 0
 
-        for (; ticks < MAX_TICKS_PER_FRAME && accumTime < timeSince; accumTime += this.physicsTick(), ++ticks) ;
+            for (; ticks < MAX_TICKS_PER_FRAME && accumTime < timeSince; accumTime += this.physicsTick(), ++ticks);
+            this.needsUpdate = true
+        }
 
         // Convert to SVG property string
         let vertices = this.drawVertices.map(v => `${v.x},${v.y}`).join(" ")
@@ -658,11 +554,8 @@ class StringComponent extends VisComponent {
         this.domElement.setAttribute("points", vertices)
         this.domElement.setAttribute("fill", "none")
 
-    this.domElement.classList.add("snap-string")
-
-    // this.domElement.setAttribute("stroke", "black")
-    // this.domElement.setAttribute("stroke-width", 3)
-  }
+        return this.inMotion // in case it needs to still update (still in motion)
+    }
 }
 
 function isTypedArray(arr) {
@@ -712,7 +605,7 @@ class SnapChain extends VisGroup {
         this.stringComponents = []
 
         this.displayOpts = {}
-        this.needsRestringing = false
+        this.needsUpdate = false
 
         this.forceSnap = false
 
@@ -728,7 +621,7 @@ class SnapChain extends VisGroup {
         this.displayOpts = deepClone(state.displayOpts)
 
         if (addToHistory) this.history.push(deepClone(state))
-        this.needsRestringing = true
+        this.needsUpdate = true
     }
 
     pushState() {
@@ -760,14 +653,12 @@ class SnapChain extends VisGroup {
 
         let state = this.history.pop()
         this.setState(state, false)
-
-        console.log(state)
     }
 
     setSnapElements(elements) {
         this.snapElements = elements.map(toElement)
         this.snapWidth = this.snapElements[0].length
-        this.needsRestringing = true
+        this.needsUpdate = true
     }
 
     createStrings() {
@@ -788,7 +679,7 @@ class SnapChain extends VisGroup {
         if (addToHistory) this.pushState()
 
         this.snapElements.push(toElement(e))
-        this.needsRestringing = true
+        this.needsUpdate = true
     }
 
     snap(addToHistory = true) {
@@ -806,14 +697,14 @@ class SnapChain extends VisGroup {
 
         console.log(opts)
 
-        this.needsRestringing = true
+        this.needsUpdate = true
     }
 
     setPosition(x, y) {
         this.displayOpts.offsetX = x
         this.displayOpts.offsetY = y
 
-        this.needsRestringing = true
+        this.needsUpdate = true
     }
 
     buildStringComponents() {
@@ -860,76 +751,29 @@ class SnapChain extends VisGroup {
 
         // one-time use
         this.forceSnap = false
-
-        this.needsRestringing = false
+        this.needsUpdate = false
     }
 
     _update() {
-        if (this.needsRestringing) {
-            this.removeChildren()
-            this.createStrings()
+        this.removeChildren()
+        this.createStrings()
 
-            this.buildStringComponents()
+        this.buildStringComponents()
 
-            let opts = this.displayOpts
-            let {offsetX, offsetY} = opts
+        let opts = this.displayOpts
+        let {offsetX, offsetY} = opts
 
-            for (let i = 0; i <= this.snapElements.length; ++i) {
-                for (let j = 0; j < this.snapWidth; ++j) {
-                    let element = new CircleComponent()
+        for (let i = 0; i <= this.snapElements.length; ++i) {
+            for (let j = 0; j < this.snapWidth; ++j) {
+                let element = new CircleComponent()
 
-                    element.x = offsetX + opts.width * j
+                element.x = offsetX + opts.width * j
                     element.y = offsetY + opts.height * i
                     element.r = opts.postStyle.radius
-                    element.stroke = opts.postStyle.stroke
-                    element.strokeWidth = opts.postStyle.strokeWidth
-                    element.fill = opts.postStyle.fill
 
                     this.addChild(element)
                 }
             }
-        }
-    }
-}
-
-class SnapVisualization extends VisGroup {
-    constructor() {
-        super()
-
-        // Create svg element
-        this.domElement = document.createElementNS("http://www.w3.org/2000/svg", "svg")
-    }
-
-    resize() {
-        this.setDims(window.innerWidth, window.innerHeight)
-    }
-
-    setDims(width, height) {
-        // Set svg dimensions
-        this.domElement.setAttribute("width", width)
-        this.domElement.setAttribute("height", height)
-    }
-
-    render() {
-        this.update()
-
-        let foundIDs = []
-        let components = this.getFlattenedComponents()
-
-        for (let component of components) {
-            if (!this.domElement.getElementById(component.id)) {
-                this.domElement.appendChild(component.domElement)
-            }
-
-            foundIDs.push(component.id)
-        }
-
-        for (let node of Array.from(this.domElement.childNodes)) {
-            let id = node.getAttribute("id")
-            if (!foundIDs.includes(id)) {
-                this.domElement.removeChild(node)
-            }
-        }
     }
 }
 
@@ -1024,11 +868,11 @@ function addItems() {
                             mainChain.forceSnap = true
                             MUST_ADD_AFTER_SQUISH.forEach(e => mainChain.addElement(e))
                             MUST_ADD_AFTER_SQUISH = []
-                            mainChain.needsRestringing = true
+                            mainChain.needsUpdate = true
                         }, 100) // subtle timeout
                     }
 
-                    mainChain.needsRestringing = true
+                    mainChain.needsUpdate = true
                 }, 1 / 60)
 
             } else {
@@ -1066,7 +910,7 @@ document.getElementById("giant-button").onclick = () => {
 }
 
 function render() {
-    vis.resize()
+    vis.resizeToWindow()
     vis.render()
 
     window.requestAnimationFrame(render)
@@ -1074,7 +918,10 @@ function render() {
 
 render()
 
-// Switches the current color theme.
+document.getElementById("switch-theme").addEventListener("click", switchTheme)
+document.getElementById("reset").addEventListener("click", () => mainChain.reset())
+document.getElementById("undo").addEventListener("click", () => mainChain.undo())
+
 function switchTheme() {
     if (document.body.classList.contains('dark'))
         document.body.classList.remove('dark');
