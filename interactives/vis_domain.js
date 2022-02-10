@@ -227,7 +227,7 @@ class VisDomain {
 
     if (on && on === this.mouseDownOn) {
       // Clicked on an object
-      on.triggerEvent?.("click", { pos: this.mousePos })
+      on.triggerEvent?.("short click", { pos: this.mousePos })
     }
   }
 

@@ -1,5 +1,5 @@
 import { VisDomain } from "./vis_domain.js"
-import {Color, GridHelper, Vector3} from "../external/three.module.js"
+import {Color, GridHelper, Matrix3, Matrix4, Vector3} from "../external/three.module.js"
 
 import * as THREE from "../external/three.module.js"
 import * as TWEEN from "../external/tween.esm.js"
@@ -8,6 +8,8 @@ import {VisText} from "./text_elem.js"
 import {SymmetricObject} from "./symmetric_object.js"
 import {explainMatrix, motionFromMatrix, SHAPES} from "./symmetries.js"
 import {VisObject} from "./vis_object.js"
+import {ReflectivePlaneObject} from "./reflective_plane_object.js"
+import {AxisObject} from "./axis_object.js"
 
 Object.assign(window, { THREE })
 
@@ -18,7 +20,7 @@ let styles = {
   gridColor: { default: 0x888888, handler: v => mainGrid.colorCenterLine = mainGrid.colorGrid = new Color(v) },
   backgroundColor: { default: 0xf0f0f0, handler: v => (mainDomain.setBG(v), miniatureDomain.setBG(v)) },
   //selectedTriangleColor: { default: 0x3f3f3f, handler: setColor(() => selectedTriangleMaterial)},
-  allow3DRotation: { default: false, handler: v => (mainDomain.allow3DRotation(v), DOM.allow3DRotation.checked = v) }
+  allow3DRotation: { default: true, handler: v => (mainDomain.allow3DRotation(v), DOM.allow3DRotation.checked = v) }
 }
 
 Object.assign(window, { styles })
@@ -38,7 +40,7 @@ let DOMList = {
   items: "items",
   allow3DRotation: "allow-3d",
   miniature: "miniature",
-
+  shapeSelector: "shape-select"
 }
 
 // Retrieve elements
@@ -83,13 +85,15 @@ function render () {
 }
 
 let miniatureSym
-
-let CURRENT_SHAPE = SHAPES.cube
+let CURRENT_SHAPE = SHAPES.triangle
 
 let congaLine = []
 
 function resetAll () {
     congaLine.forEach(c => mainDomain.scene.remove(c))
+  clearDemonstration()
+
+  mainDomain.clickableObjects = []
 
   let seed = new SymmetricObject({ shape: CURRENT_SHAPE, position: STARTING_POS.clone() })
   congaLine = [ seed ]
@@ -101,13 +105,22 @@ function resetAll () {
   miniatureDomain.scene.remove(miniatureSym)
   miniatureSym = new SymmetricObject({ shape: CURRENT_SHAPE })
 
+  miniatureSym.showAxisObjects(showAxes)
+  miniatureSym.showPlaneObjects(showPlanes)
+
   miniatureDomain.scene.add(miniatureSym)
   miniatureDomain.setDefaultCamera()
   mainDomain.setDefaultCamera()
+
+  clearRotateButtons()
+  toggleReflectButton(true)
 }
 
 function setShape (shape) {
     CURRENT_SHAPE = shape
+  let name = shape.name
+
+  DOM.shapeSelector.value = name
   resetAll()
 }
 
@@ -260,7 +273,7 @@ function createRotateButtons(...degrees){
       const btn = document.createElement('button');
       btn.className = 'smol-button';
       btn.addEventListener('click', ()=>{
-        window.dispatchEvent(new CustomEvent("on rotate", {detail: n}))
+        window.dispatchEvent(new CustomEvent("on rotate", { detail: n }))
       })
       btn.innerText = n
       return btn
@@ -275,14 +288,79 @@ window.addEventListener("on deselected", ()=>{
     toggleReflectButton(true)
 })
 
-window.addEventListener("on plane selected", ()=>{toggleReflectButton(false)})
+window.addEventListener("on plane selected", ()=>{
+  toggleReflectButton(false)})
 
-window.addEventListener("on axis selected", (e)=>{createRotateButtons(...e.detail)})
+window.addEventListener("on axis selected", (e)=>{
+  createRotateButtons(...e.detail)
+})
 
 window.addEventListener("on rotate", (e)=>{
+  doRotation(e.detail * Math.PI / 180)
     console.log("Rotate the object by ", e.detail, " degrees")
 })
 
 resetAll()
+
+var showAxes = true
+var showPlanes = true
+
+window.showAxes = (v) => {
+  showAxes = v
+  showStuff()
+}
+
+function showStuff () {
+  miniatureSym.showPlaneObjects(showPlanes)
+  miniatureSym.showAxisObjects(showAxes)
+}
+
+window.showPlanes = (v) => {
+  showPlanes = v
+  showStuff()
+}
+
+DOM.shapeSelector.addEventListener("input", () => {
+  let shapeName = DOM.shapeSelector.value
+
+  let shape = Object.values(SHAPES).filter(s => s.name === shapeName)[0]
+  if (!shape) return // unknown shape
+
+  setShape(shape)
+})
+
+setShape(SHAPES.triangle)
+
+window.doSelectedAction = () => {
+  let selected = miniatureDomain.selected
+    if (!selected) return
+
+  if ((selected instanceof ReflectivePlaneObject)) doReflection()
+  if (selected instanceof AxisObject) doRotation()
+}
+
+window.doReflection = () => {
+    let selected = miniatureDomain.selected
+
+  let motion = motionFromMatrix(CURRENT_SHAPE, selected.toMatrix())
+  if (motion)
+    addToCongaLine(motion)
+}
+
+window.doRotation = (radians) => {
+  let selected = miniatureDomain.selected
+
+  let motion = motionFromMatrix(CURRENT_SHAPE, selected.toMatrix(radians))
+  if (motion)
+    addToCongaLine(motion)
+}
+
+window.showNetMovement = () => {
+    demonstrateCongaLine()
+}
+
+window.resetStuff = () => {
+    resetAll()
+}
 
 Object.assign(window, { mainDomain, miniatureDomain, addToCongaLine, setShape, demonstrateCongaLine })

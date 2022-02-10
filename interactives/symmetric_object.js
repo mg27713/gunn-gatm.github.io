@@ -13,7 +13,7 @@ import {VisObject} from "./vis_object.js"
 import {ReflectivePlaneObject} from "./reflective_plane_object.js"
 import {nullGeometry, nullMaterial} from "./null.js"
 import {VisText} from "./text_elem.js"
-import {explainMatrix, Motion, motionFromMatrix} from "./symmetries.js"
+import {explainMatrix, Motion, motionFromMatrix, SymmetricShape} from "./symmetries.js"
 
 import * as TWEEN from "../external/tween.esm.js"
 
@@ -26,11 +26,10 @@ export class SymmetricObject extends VisObject {
 
     this.position.copy(params.position ?? new Vector3(0, 0, 0))
 
-    this.queuedMotions = []
     this.showVertexLabels = params.showVertexLabels ?? true
 
     let shape = this.shape = params.shape
-    if (!shape) throw new Error("fuck you")
+    if (!(shape instanceof SymmetricShape)) throw new Error("why")
 
     this.inMotion = false
 
@@ -195,7 +194,8 @@ export class SymmetricObject extends VisObject {
     this.removeIndicator()
     let indicator = this.motionIndicator = new AxisObject({
       normal: axis,
-      subtends: theta
+      subtends: theta,
+      showCone: false
     })
 
     this.children.push(indicator)
@@ -244,12 +244,13 @@ export class SymmetricObject extends VisObject {
         window.dispatchEvent(new CustomEvent("on deselected"))
       } else {
         domain.selected = o
+
         if (o instanceof ReflectivePlaneObject) {
-          window.dispatchEvent(new CustomEvent("on plane selected", {detail:o}))
-        }
-        else if (o instanceof AxisObject) {
-          const rotateOptions = [90, 180, 270] //todo: test data, change this based on stuff
-          window.dispatchEvent(new CustomEvent("on axis selected", {detail:rotateOptions}))
+          window.dispatchEvent(new CustomEvent("on plane selected", { detail: o }))
+        } else if (o instanceof AxisObject) {
+          let opts = this.shape.getRotationOptions(o.normal)
+
+          window.dispatchEvent(new CustomEvent("on axis selected", { detail: opts }))
         }
       }
     }

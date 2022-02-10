@@ -27,6 +27,7 @@ class VisText extends VisObject {
 
       let v = new Vector3()
       v.setFromMatrixPosition(this.matrixWorld)
+      let vo = v.clone()
       v.project(camera)
 
       v = this.domain.drawToDOMCoords(v)
@@ -36,7 +37,7 @@ class VisText extends VisObject {
       let y = v.y + adjust.y
 
       if (-100 < x && x < 4000 && -100 < y && y < 4000) {
-        displayedTextElems.push({ text: this.text, x, y })
+        displayedTextElems.push({ text: this.text, x, y, dist: vo.clone().sub(camera.position).length() })
       }
     }
   }
@@ -44,6 +45,10 @@ class VisText extends VisObject {
 
 export function clearTextElements () {
   displayedTextElems = []
+}
+
+function distToSize (d) {
+  return Math.min(40, Math.max(200 / d, 20))
 }
 
 // Takes in something like { text: ..., x, y, classes: [], noShadow: false/true }
@@ -79,7 +84,7 @@ export function drawTextElements(textSVG, elems=displayedTextElems) {
     }
 
     dom.textContent = e.text
-    setElemProps(dom, { x: e.x, y: e.y })
+    setElemProps(dom, { x: e.x, y: e.y, /*style: `font-size:${distToSize(e.dist ?? 1)}px`*/ })
   }
 
   // Remove unused text elements

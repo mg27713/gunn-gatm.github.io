@@ -1,4 +1,4 @@
-import {Color, MeshBasicMaterial, Vector3} from "../external/three.module.js"
+import {Color, Matrix3, Matrix4, MeshBasicMaterial, Vector3} from "../external/three.module.js"
 import {generateArrow, getCylinderBasis} from "./symmetries.js"
 import {nullGeometry} from "./null.js"
 import {ConvexGeometry} from "../external/three_addons.js"
@@ -40,7 +40,7 @@ class ReflectivePlaneObject extends VisObject {
       this.parent.restoreMaterials()
     })
 
-    this.addVisEventListener("click", () => {
+    this.addVisEventListener("short click", () => {
       this.parent.selectSym(this)
     })
   }
@@ -106,6 +106,15 @@ class ReflectivePlaneObject extends VisObject {
 
   castratedClone () {
     return this.visible ? new ReflectivePlaneObject(this) : null
+  }
+
+  toMatrix () {
+    let [a, b, c] = this.normal.toArray()
+    return new Matrix4().setFromMatrix3(new Matrix3().set(
+      1 - 2 * a * a, -2 * a * b, -2 * a * c,
+      -2 * a * b, 1 - 2 * b * b, -2 * b * c,
+      -2 * a * c, - 2 * b * c, 1 - 2 * c * c
+    ))
   }
 }
 

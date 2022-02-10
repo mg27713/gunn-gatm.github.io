@@ -1,4 +1,4 @@
-import {MeshPhongMaterial, Vector3} from "../external/three.module.js"
+import {Matrix4, MeshPhongMaterial, Quaternion, Vector3} from "../external/three.module.js"
 import {generateArrow, getCylinderBasis} from "./symmetries.js"
 import {VisObject} from "./vis_object.js"
 import { nullGeometry} from "./null.js"
@@ -20,6 +20,7 @@ class AxisObject extends VisObject {
     this.subtendsShift = params.subtendsShift ?? 0.1
     this.subtendsRadius = params.subtendsRadius ?? 0.5
     this.ccw = params.ccw ?? true
+    this.showCone = params.showCone ?? true
 
     this.computeChildren()
     this.addVisEventListener("hover", () => {
@@ -30,7 +31,7 @@ class AxisObject extends VisObject {
       this.parent.restoreMaterials()
     })
 
-    this.addVisEventListener("click", () => {
+    this.addVisEventListener("short click", () => {
       this.parent.selectSym(this)
     })
 
@@ -81,13 +82,18 @@ class AxisObject extends VisObject {
     this.children.forEach(child => child.dispose())
     if (this.geometry !== nullGeometry) this.geometry.dispose()
 
-    let n = this.normal
+    let n = this.normal.clone()
     if (n.length() < 0.2) {
       this.geometry = nullGeometry
       return
     }
 
+    let s = this.subtends
     n.normalize().multiplyScalar(this.axisLen)
+    if (n.y < 0) {
+      n.multiplyScalar(-1)
+      s *= -1
+    }
 
     let b = n.clone().multiplyScalar(-1)
     let e = n
@@ -95,15 +101,17 @@ class AxisObject extends VisObject {
     // b --> e axis
     let axisGeometry = generateArrow([ b, e ], {
       shaftGirth: this.girth, coneGirth: this.girth * 2,
+      showCone: this.showCone,
       coneLen: this.girth * 3 })
     axisGeometry.computeVertexNormals()
 
     this.geometry = axisGeometry
 
     if (this.subtends) {
-      let s = this.subtends, ss = this.subtendsShift /* from tip */, al = this.axisLen, girth = this.littleGirth, r = this.subtendsRadius
+      let ss = this.subtendsShift /* from tip */, al = this.axisLen, girth = this.littleGirth, r = this.subtendsRadius
 
-      let m = e.clone().add(this.normal.normalize().multiplyScalar(-ss)) // center of the subtends thingy
+
+      let m = e.clone().add(n.multiplyScalar(-ss)) // center of the subtends thingy
       let [ bp, bq ] = getCylinderBasis(n, r, true)
 
       let verts = []
@@ -116,7 +124,7 @@ class AxisObject extends VisObject {
       }
 
       if (s < 0) {
-        verts.reverse()
+        //verts.reverse()
       }
 
       let ssGeometry = generateArrow(verts, {
@@ -132,6 +140,10 @@ class AxisObject extends VisObject {
 
   castratedClone () {
     return this.visible ? new AxisObject(this) : null
+  }
+
+  toMatrix (theta=0) {
+    return new Matrix4().setRotationFromQuaternion(new Quaternion().setFromAxisAngle(this.normal, theta))
   }
 }
 

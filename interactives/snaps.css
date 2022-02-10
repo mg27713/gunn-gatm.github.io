@@ -44,7 +44,7 @@ body.dark {
     background-color: var(--sidebar);
 }
 
-h1 {
+h1, h2 {
     text-align: center;
     margin-bottom: 0.75rem;
 }
@@ -157,7 +157,7 @@ h2 {
 }
 
 .text-label {
-    font-size: 20px;
+    font-size: 30px;
     text-anchor: middle;
 }
 

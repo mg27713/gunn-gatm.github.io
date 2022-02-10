@@ -50,6 +50,37 @@ export class SymmetricShape {
       this.vertices = this.vertices.map(v => new Vector3(v.x, 0, v.y))
     }
   }
+
+  getRotationOptions (axisNormal) {
+    let g = this.fullSymmetryGroup
+    let opts = []
+
+    for (let e of g.elements) {
+      let m = explainMatrix(e.toMatrix(this))
+
+      if (m.length === 1 && m[0].type === "rotation") {
+        let a = m[0].axis
+        let eq
+        if (eq = closelyEquilinear(a, axisNormal)) {
+          let theta = m[0].theta
+          console.log(theta)
+          console.log(m, e, e.toMatrix(this))
+
+          if (eq === -1) {
+            theta = -theta // axis is dumb
+          }
+
+          theta = ((theta % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+          if (theta > Math.PI) theta = theta - 2 * Math.PI
+
+
+          opts.push(Math.round(theta * 180 / Math.PI))
+        }
+      }
+    }
+
+    return opts
+  }
 }
 
 export function closeEnough (d1, d2) {
@@ -159,7 +190,7 @@ export function explainMatrix (mat4) {
     let ccw = true
     if (theta > Math.PI) {
       ccw = false
-      theta = Math.PI - theta
+      theta = theta - 2 * Math.PI
     }
 
     return [ { type: "rotation", axis, theta, m: mat4, ccw } ]
@@ -170,21 +201,24 @@ export function explainMatrix (mat4) {
 
   let r = mat4.toArray()
   let a = (1 - r[0]) / 2
-  if (closeEnough(a, 0)) a = 0
-  let b = (1 - r[5]) / 2
-  if (closeEnough(b, 0)) b = 0
-  let c = (1 - r[10]) / 2
-  if (closeEnough(c, 0)) c = 0
+  if (closeEnough(a, 0)) a = 0 // arbitrarily choose a to be the positive root
 
   a = Math.sqrt(a)
-  b = Math.sqrt(b)
-  c = Math.sqrt(c)
+
+  let b = (a === 0) ? Math.sqrt(Math.abs((1 - r[5]) / 2)) : (r[1] / (-2 * a))
+  if (closeEnough(b, 0)) b = 0
+
+  let c = (a === 0) ? Math.sqrt(Math.abs((1 - r[10]) / 2)) : (r[2] / (-2 * a))
+  if (closeEnough(c, 0)) c = 0
+
+  //console.log('a', a, 'b', b, 'c', c)
 
   if (![a,b,c].every(Number.isFinite)) throw new Error("what the fuck")
 
   // We now confirm that it is a genuine reflection matrix...
 
   let expect = [ 1-2*a*a, -2*a*b, -2*a*c, NaN, -2*a*b, 1-2*b*b, -2*b*c, NaN, -2*a*c, -2*b*c, 1-2*c*c ]
+  //console.log(expect, r, a, b, c)
   if (expect.every((s, i) => !Number.isFinite(s) || closeEnough(s, r[i]))) {
     // Pure reflection about normal <a, b, c>
     return [ { type: "reflection", normal: new Vector3(a, b, c), m: mat4 }]
@@ -278,7 +312,9 @@ function closelyEquilinear (v1, v2) {
   let av1y = v2.y * r
   let av1z = v2.z * r
 
-  return (closeEnough(av1x, v1.x) && closeEnough(av1y, v1.y) && closeEnough(av1z, v1.z))
+  let sign = Math.sign(r)
+
+  return (closeEnough(av1x, v1.x) && closeEnough(av1y, v1.y) && closeEnough(av1z, v1.z)) ? sign : 0
 }
 
 export class SymmetryGroup {
@@ -474,7 +510,7 @@ export function generateArrow (verts, { res=16, showCone = true, shaftGirth = 0.
 
 export const SHAPES = {
   triangle: new SymmetricShape({
-    name: "equilateral triangle",
+    name: "Equilateral triangle",
     dimensions: 2,
     vertices: generateSkinnyPolygon(3),
     rNormNames: [ 'A', 'B', 'C' ],
@@ -485,7 +521,7 @@ export const SHAPES = {
     vertexNames: [ '1', '', '3', '', '2' ]
   }),
   triangularPrism: new SymmetricShape({
-    name: "equilateral triangular prism",
+    name: "Triangular prism",
     dimensions: 3,
     vertices: fattenPolygon(generateRegularPolygon(3, 0.7), 1.4),
     rNormNames: [ 'A', 'B', 'C', 'P' ],
@@ -493,10 +529,11 @@ export const SHAPES = {
       new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
       new Matrix4().makeScale(1, 1, -1), // dihedral
       new Matrix4().makeScale(1, -1, 1) // prism GANG 银行
-    ]
+    ],
+    vertexNames: [ '1\'', '1', '3\'', '3', '2\'', '2' ]
   }),
   cube: new SymmetricShape({
-    name: "cube",
+    name: "Cube",
     dimensions: 3,
     vertices: fattenPolygon(generateRegularPolygon(4, Math.sqrt(2) / 2, Math.PI / 4), 1), // close enough
     generators: [
@@ -516,9 +553,9 @@ export const SHAPES = {
       0x0000ff, 0x0000ff, 0x0000ff, 0x0000ff
     ],
     vertexNames: [
-      '1', '2', '3', '4', "1'", "2'", "3'", "4'"
+      '3', '2', '4', '1', "2'", "3'", "1'", "4'"
     ]
   })
 }
 
-Object.assign(window, { SHAPES })
+Object.assign(window, { SHAPES, explainMatrix })
