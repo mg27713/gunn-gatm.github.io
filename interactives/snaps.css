@@ -194,3 +194,7 @@ h2 {
 .hidden {
     display: none;
 }
+
+.action-container {
+    display: flex; flex-direction: row;gap:1rem;justify-content: space-between;
+}

@@ -147,6 +147,7 @@ function allowClick (o) {
 }
 
 let congaInMotion = false
+let animDuration = 1000
 
 function addToCongaLine (motion) {
     if (!motion) return
@@ -168,7 +169,7 @@ function addToCongaLine (motion) {
   allowClick(n)
 
   new TWEEN.Tween(n.position)
-    .to(n.position.clone().add(new Vector3(2.5, 0, 0)), 1000)
+    .to(n.position.clone().add(new Vector3(2.5, 0, 0)), animDuration)
     .easing(TWEEN.Easing.Quadratic.In)
     .onUpdate(() => {
       n.updateMatrix()
@@ -182,7 +183,7 @@ function addToCongaLine (motion) {
       }
     })
     .onComplete(() => {
-      let god = n.performMotion(motion, 1000)
+      let god = n.performMotion(motion, animDuration)
       if (god) {
         god.onComplete(() => {
           congaInMotion = false
@@ -233,7 +234,7 @@ function demonstrateCongaLine () {
 
   // TODO rotoreflection
   new TWEEN.Tween(n.position)
-    .to(last.position.clone().add(shiftDown), 2000)
+    .to(last.position.clone().add(shiftDown), 1.5 * animDuration)
     .easing(TWEEN.Easing.Quadratic.In)
     .onUpdate(() => {
       n.updateMatrix()
@@ -247,10 +248,7 @@ function demonstrateCongaLine () {
       }
     })
     .onComplete(() => {
-      let god = n.performMotion(netMotion, 1000)
-      if (god) {
-        god.onComplete(() => addToCongaLine(queue.splice(0, 1)[0]))
-      }
+      let god = n.performMotion(netMotion, animDuration)
     }).start()
 }
 
@@ -275,7 +273,9 @@ function createRotateButtons(...degrees){
       btn.addEventListener('click', ()=>{
         window.dispatchEvent(new CustomEvent("on rotate", { detail: n }))
       })
-      btn.innerText = n
+
+      btn.innerText = `Rotate ${n}°`
+
       return btn
     })
     nodes.forEach((node)=>{
@@ -363,4 +363,6 @@ window.resetStuff = () => {
     resetAll()
 }
 
-Object.assign(window, { mainDomain, miniatureDomain, addToCongaLine, setShape, demonstrateCongaLine })
+window.setAnimSpeed = v => animDuration = (1600 - v)
+
+Object.assign(window, { mainDomain, miniatureDomain, addToCongaLine, setShape, demonstrateCongaLine, motionFromMatrix })

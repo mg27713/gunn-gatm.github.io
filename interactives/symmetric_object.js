@@ -118,8 +118,18 @@ export class SymmetricObject extends VisObject {
         }
       } else {
         // rotoreflection
-        return this.performMotion(motionFromMatrix(this.shape, expl[0].m), time / 2)
-          .onComplete(() => this.performMotion(motionFromMatrix(this.shape, expl[1].m), time / 2))
+        let m1 = this.performMotion(motionFromMatrix(this.shape, expl[0].m), time / 2)
+          if (!m1) {
+            // Rotoreflection didn't work... just do it immediately
+            this.targetMotion = res
+
+            this.currentTransform.copy(this.targetMotion.toMatrix(this.shape))
+            this.updateMatrixCow()
+
+            return null
+          } else {
+            return m1.onComplete(() => this.performMotion(motionFromMatrix(this.shape, expl[1].m), time / 2))
+          }
       }
     }
   }

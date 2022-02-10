@@ -181,6 +181,8 @@ export function explainMatrix (mat4) {
   let k = Math.sqrt(1 - q.w * q.w)
   if (k < 1e-6) k = 1
 
+  console.log(k, q)
+
   let axis = new Vector3(q.x / k, q.y / k, q.z / k)
   let theta = 2 * Math.acos(q.w)
 
@@ -513,6 +515,16 @@ export const SHAPES = {
     name: "Equilateral triangle",
     dimensions: 2,
     vertices: generateSkinnyPolygon(3),
+    generators: [
+      new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
+      new Matrix4().makeScale(1, 1, -1) // single reflection to make it a dihedral group
+    ],
+    vertexNames: [ '1', '', '3', '', '2' ]
+  }),
+  square: new SymmetricShape({
+    name: "Square",
+    dimensions: 2,
+    vertices: generateSkinnyPolygon(3),
     rNormNames: [ 'A', 'B', 'C' ],
     generators: [
       new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
@@ -524,13 +536,22 @@ export const SHAPES = {
     name: "Triangular prism",
     dimensions: 3,
     vertices: fattenPolygon(generateRegularPolygon(3, 0.7), 1.4),
-    rNormNames: [ 'A', 'B', 'C', 'P' ],
     generators: [
       new Matrix4().makeRotationY(2 * Math.PI / 3), // single rotation of 120°
       new Matrix4().makeScale(1, 1, -1), // dihedral
       new Matrix4().makeScale(1, -1, 1) // prism GANG 银行
     ],
-    vertexNames: [ '1\'', '1', '3\'', '3', '2\'', '2' ]
+    vertexNames: [ '1\'', '1', '3\'', '3', '2\'', '2' ],
+    faceColors: [
+      0x0000ff, 0x0000ff, 0x0000ff,
+      0xff0000, 0xff0000, 0xff0000,
+      0xdddddd, 0xdddddd, 0xdddddd,
+      0x00ff00, 0x00ff00, 0x00ff00,
+      0x0000ff, 0x0000ff, 0x0000ff,
+      0x222222, 0x222222, 0x222222,
+      0x00ff00, 0x00ff00, 0x00ff00,
+      0xff0000, 0xff0000, 0xff0000,
+    ]
   }),
   cube: new SymmetricShape({
     name: "Cube",
